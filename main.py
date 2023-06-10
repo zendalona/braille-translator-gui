@@ -4,6 +4,7 @@ from gi.repository import Gtk, Gdk, Pango
 import louis
 
 
+
 class MyWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Braille Translator")
@@ -234,6 +235,16 @@ class MyWindow(Gtk.Window):
          # Connect Goto Line menu item to callback function
         goto_item.connect("activate", self.on_goto_line_activate)
 
+
+        edit_menu.append(Gtk.SeparatorMenuItem())
+
+        find = Gtk.MenuItem(label="Find")
+        edit_menu.append(find)
+        find.connect("activate", self.on_find_activate)
+
+        find_and_replace = Gtk.MenuItem(label="Find and Replace")
+        edit_menu.append(find_and_replace)
+        find_and_replace.connect("activate", self.on_find_and_replace_activate)
         
 
         edit_menu_item = Gtk.MenuItem.new_with_label("Edit")
@@ -408,6 +419,15 @@ class MyWindow(Gtk.Window):
             
             
             
+    def on_find_activate(self, widget):
+	    focused_textview = self.get_focus()
+	    Find(focused_textview).show()
+
+    def on_find_and_replace_activate(self, widget):
+	    focused_textview = self.get_focus()
+	    FindAndReplace(focused_textview).show()
+
+
     def on_goto_line_activate(self, widget):
         dialog = Gtk.Dialog(title="Goto Line", parent=self, flags=0)
         dialog.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
@@ -602,6 +622,190 @@ class MyAboutDialog(Gtk.AboutDialog):
         self.set_authors(["Greeshna Sarath"])
         self.set_documenters(["Greeshna Sarath"])
         self.set_artists(["Nalin Sathyan" ,"Dr.Saritha Namboodiri", "Subha I N", "Bhavya P V", "K.Sathyaseelan"])  
+
+class Find(Gtk.Window):
+	def __init__ (self,textview):
+		Gtk.Window.__init__(self, title="Find")
+		
+		self.textbuffer = textview.get_buffer();
+		self.textview = textview;
+				
+		mark = self.textbuffer.get_insert()
+		self.iter = self.textbuffer.get_iter_at_mark(mark)
+		self.match_start = self.iter.copy()
+		self.match_start.backward_word_start()
+		self.match_end = self.iter.copy()
+		self.match_end.forward_word_end()
+		
+		
+		self.tag = self.textbuffer.create_tag(foreground = "Blue")
+
+
+		self.vbox = Gtk.VBox()
+		
+		self.vbox2 = Gtk.VBox()
+		
+		self.entry = Gtk.Entry()
+
+		label = Gtk.Label()
+		label.set_text("Search for : ")
+		label.set_mnemonic_widget(self.entry)
+
+		hbox = Gtk.HBox()			
+		hbox.pack_start(label,True,True,0)
+		hbox.pack_start(self.entry,True,True,0)
+		label.show()
+		self.entry.show()
+		hbox.set_hexpand(True)
+		hbox.set_vexpand(False)
+		self.vbox2.pack_start(hbox, True, True, 0)
+		self.vbox.pack_start(self.vbox2, True, True, 0)
+		
+
+		self.context_label = Gtk.Label()
+		self.vbox.pack_start(self.context_label, True, True, 0)
+		
+		# Buttons
+		hbox2 = Gtk.HBox()
+
+		button_next = Gtk.Button(label="Next")
+		button_next.connect("clicked", self.find_next)
+		hbox2.pack_start(button_next,True,True,0)
+
+		button_previous = Gtk.Button(label="Previous")
+		button_previous.connect("clicked", self.find_previous)		
+		hbox2.pack_start(button_previous,True,True,0)
+
+		button_close = Gtk.Button(label="Close")
+		button_close.connect("clicked", self.close)
+		hbox2.pack_start(button_close,True,True,0)
+
+		self.vbox.pack_start(hbox2, True, True, 0)
+		
+		self.add(self.vbox)
+		self.vbox.show_all()
+		
+				
+
+	def close(self,widget,data=None):
+		start,end = self.textbuffer.get_bounds()
+		self.textbuffer.remove_all_tags(start,end)
+		self.destroy()	
+
+	def trim_context_text(self,text):
+		"""cut the line if it is too lengthy (more than 10 words)
+		without rearranging existing lines. This will avoid the resizing of spell window"""
+		new_text = ""
+		for line in text.split('\n'):
+			if (len(line.split(' ')) > 10):
+				new_line = ""
+				pos = 1
+				for word in line.split(" "):
+					new_line += word
+					pos += 1
+					if (pos % 10 == 0):
+						new_line += '\n'
+					else:
+						new_line += ' '
+
+				new_text += new_line
+				if (pos % 10 > 3):
+					new_text += '\n'
+			else:
+				new_text += line + '\n'
+		return new_text
+	
+	def find_next(self,widget,data=None):
+		self.find(True)
+
+	def find_previous(self,widget,data=None):
+		self.find(False)		
+		
+	def find(self,data):
+		word = self.entry.get_text()
+		start , end = self.textbuffer.get_bounds()
+		if (data == True):
+			self.match_start.forward_word_end()
+			results = self.match_start.forward_search(word, 0, end)
+		else:
+			self.match_end.backward_word_start()
+			results = self.match_end.backward_search(word, 0,start)
+		
+		if results:
+			self.textbuffer.remove_all_tags(start,end)
+			self.match_start, self.match_end = results
+			self.textbuffer.place_cursor(self.match_start)
+			self.textbuffer.apply_tag(self.tag,self.match_start, self.match_end)
+			self.textview.scroll_to_iter(self.match_start, 0.2, use_align=False, xalign=0.5, yalign=0.5)
+			sentence_start=self.match_start.copy()
+			sentence_start.backward_sentence_start()
+			sentence_end=self.match_start.copy()
+			sentence_end.forward_sentence_end()
+			sentence = self.textbuffer.get_text(sentence_start,sentence_end,True)
+			self.context_label.set_text(self.trim_context_text(sentence))
+			self.context_label.grab_focus()
+		else:
+			self.context_label.set_text("Word {0} Not found".format(word))
+			self.context_label.grab_focus()
+
+class FindAndReplace(Find):
+	def __init__(self,textview):
+		Find.__init__(self,textview)
+		
+		self.set_title("Find and Replace")
+
+		self.replace_entry = Gtk.Entry()
+
+		label = Gtk.Label()
+		label.set_text("Replace with : ")
+		label.set_mnemonic_widget(self.replace_entry)
+
+		box = Gtk.HBox()			
+		box.pack_start(label,True,True,0)
+		box.pack_start(self.replace_entry,True,True,0)
+		label.show()
+		self.replace_entry.show()
+		box.set_hexpand(True)
+		box.set_vexpand(False)
+		
+		self.vbox2.pack_start(box,True,True,0)
+		self.vbox2.show_all()
+
+		# Buttons
+		hbox2 = Gtk.HBox()
+
+		button_replace = Gtk.Button(label="Replace")
+		button_replace.connect("clicked", self.replace)
+		hbox2.pack_start(button_replace,True,True,0)
+
+		button_replace_all = Gtk.Button(label="Replace All")
+		button_replace_all.connect("clicked", self.replace_all)		
+		hbox2.pack_start(button_replace_all,True,True,0)
+
+		self.vbox.pack_start(hbox2,True,True,0)
+		self.vbox.show_all()
+		
+	def replace(self,widget,data=None):
+		replace_word = self.replace_entry.get_text()
+		self.textbuffer.delete(self.match_start, self.match_end)
+		self.textbuffer.insert(self.match_end,replace_word)
+		self.match_start = self.match_end.copy()
+		self.find(True)
+	
+	def replace_all(self,widget,data=None):
+		word = self.entry.get_text()
+		replace_word = self.replace_entry.get_text()
+		end = self.textbuffer.get_end_iter()
+		while(True):
+			self.match_start.forward_word_end()
+			results = self.match_start.forward_search(word, 0, end)
+			if results:
+				self.match_start, self.match_end = results
+				self.textbuffer.delete(self.match_start, self.match_end)
+				self.textbuffer.insert(self.match_end,replace_word)
+				self.match_start = self.match_end.copy()
+			else:
+				break
 
 
 win = MyWindow()
