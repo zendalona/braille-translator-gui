@@ -1,3 +1,29 @@
+#    Braile-Translator
+
+
+#    Copyright (C) 2022-2023 Greeshna Sarath <greeshnamohan001@gmail.com>
+
+#    Sreekrishnapuram V T Bhattathiripad College,Mannampatta
+
+#    This project supervised by Zendalona(2022-2023)
+
+#    Project Home Page : www.zendalona.com/BRAILLE TRANSLATOR
+
+#    This program is free software you can redistribute it/or modify
+#    It under the terms of the GNU General Public License as published by the free software foundation ,either version 3 of the license ,or any later version 
+
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+
+
+#    You should have received a copy of the GNU General Public License
+#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+#####################################################################################################################################################################################
+
 import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, Pango
@@ -8,12 +34,13 @@ import louis
 class MyWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Braille Translator")
-        
+        self.line_limit = 0
         #for both text fields to be vertical and spacing between them
 
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add(vbox)
         
+
      
         #create gtk menubar  and placed in top window
         
@@ -181,6 +208,18 @@ class MyWindow(Gtk.Window):
         self.language_combo1.set_size_request(225, 40)
         self.language_combo1.connect("changed", self.on_combo_changed)
         box1.pack_start(self.language_combo1, False, False, 0)
+        
+        label = Gtk.Label("line limit:")
+        box1.pack_start(label, True, True, 0)
+        
+        # Create the spin button
+        self.spin_button = Gtk.SpinButton()
+        self.spin_button.set_range(1, 100)  # Set the minimum and maximum values
+        self.spin_button.set_value(40)      # Set the initial value
+        self.spin_button.set_increments(1, 10)  # Set the increment and page increment values
+        box1.pack_start(self.spin_button, True, True, 0)
+        
+        
 
         self.translate_button = Gtk.Button(label="Translate")
         self.translate_button.connect("clicked", self.on_translate_clicked)
@@ -498,9 +537,13 @@ class MyWindow(Gtk.Window):
         louis.translateStringToFile(language_file, self.textview1.get_buffer(), self.textview2.get_buffer())
 
 
+
+
+    
+
     def on_translate_clicked(self, button):  #write button or widget
+        line_limit = int(self.spin_button.get_value())  # Get the value of the spin button
         
-        # Rest of the code...
         buffer1 = self.textview1.get_buffer()
         text1 = ""
 
@@ -537,15 +580,28 @@ class MyWindow(Gtk.Window):
         # Translate the text to Braille using the selected table
         braille = louis.translate(table, text1)
 
+        # Shape the braille output for printer
+        new_text = self.shape_text_with_line_limit(braille[0], line_limit)
+
         # Set the text of the second text view to the Braille translation
-        buffer2.set_text(existing_text + braille[0])
+        buffer2.set_text(existing_text + new_text)
 
         # Restore the cursor position in the second text view
         if cursor_position <= len(buffer2.get_text(buffer2.get_start_iter(), buffer2.get_end_iter(), True)):
             cursor_iter = buffer2.get_iter_at_offset(cursor_position)
             buffer2.place_cursor(cursor_iter)
             
-            
+    def shape_text_with_line_limit(self, input_text, length):
+	    output_text = ""
+	    character_count = -1
+	    for character in input_text:
+		    if(character_count == length):
+			    character_count = 0;
+			    output_text = output_text + "\n"
+		    else:
+			    character_count = character_count+1
+		    output_text = output_text+character
+	    return output_text
 
     def set_cursor_color(self, textview, color):
 	    colors_in_float = Gdk.color_parse(color).to_floats()
@@ -560,6 +616,8 @@ class MyWindow(Gtk.Window):
 	    except:
 		    print("Unnable to set cursor color!")
 
+
+    
     def set_selection_color(self, textview, font_color, background_color):
 	    color1 = Gdk.color_parse(font_color)
 	    color2 = Gdk.color_parse(background_color)
@@ -807,8 +865,8 @@ class FindAndReplace(Find):
 			else:
 				break
 
-
-win = MyWindow()
-win.connect("destroy", Gtk.main_quit)
-win.show_all()
-Gtk.main()
+if __name__ == "__main__":
+    win = MyWindow()
+    win.connect("destroy", Gtk.main_quit)
+    win.show_all()
+    Gtk.main()
