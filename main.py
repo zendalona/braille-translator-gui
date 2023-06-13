@@ -225,6 +225,8 @@ class MyWindow(Gtk.Window):
         self.translate_button.connect("clicked", self.on_translate_clicked)
         box1.pack_end(self.translate_button, False, False, 0)
         self.translate_button.set_size_request(225, 40)
+
+        self.connect("key-press-event",self.on_key_press_event)
         
         
 
@@ -294,6 +296,28 @@ class MyWindow(Gtk.Window):
         # Add menu items to the menubar
         menubar.append(file_menu_item)
         menubar.append(edit_menu_item)
+
+    def on_key_press_event(self, widget, event):
+        #print("Key press on widget: ", widget)
+        #print("          Modifiers: ", event.state)
+        #print("      Key val, name: ", event.keyval, Gdk.keyval_name(event.keyval))
+
+        # check the event modifiers (can also use SHIFTMASK, etc)
+        shift = (event.state & Gdk.ModifierType.SHIFT_MASK)
+        ctrl = (event.state & Gdk.ModifierType.CONTROL_MASK)
+        alt = (event.state & Gdk.ModifierType.MOD1_MASK)
+
+        # see if we recognise a keypress
+        if alt and event.keyval == Gdk.KEY_1:
+            self.textview1.grab_focus()
+
+        # see if we recognise a keypress
+        if alt and event.keyval == Gdk.KEY_2:
+            self.textview2.grab_focus()
+
+        # see if we recognise a keypress
+        if ctrl and event.keyval == Gdk.KEY_t:
+            self.on_translate_clicked(None)
 
     def on_new_activated(self, widget): 
 		
