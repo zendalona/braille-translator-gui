@@ -198,6 +198,10 @@ class MyWindow(Gtk.Window):
         box1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         self.grid.attach(box1, 0, 1, 1, 1)
 
+        label = Gtk.Label()
+        label.set_label("Language: ")
+        box1.pack_start(label, False, False, 0)
+
         self.table_names = [(0, 'en-us-g1.ctb'), (1, 'hi-in-g1.ctb'), (2, 'ml-in-g1.ctb')]
 
         self.language_combo1 = Gtk.ComboBoxText()
