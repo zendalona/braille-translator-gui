@@ -234,6 +234,7 @@ class MyWindow(Gtk.Window):
 
         self.connect("key-press-event",self.on_key_press_event)
         
+        self.textview1.grab_focus()
         
 
     def create_menu(self, menubar):
