@@ -201,15 +201,18 @@ class MyWindow(Gtk.Window):
         label.set_label("Language")
         box1.pack_start(label, False, False, 0)
 
-        self.table_names = [(0, 'en-us-g1.ctb'), (1, 'hi-in-g1.ctb'), (2, 'ml-in-g1.ctb')]
+        self.table_store = Gtk.ListStore(str, str)
+        self.table_store.append(["English", "en-us-g1.ctb"])
+        self.table_store.append(["Hindi", "hi-in-g1.utb"])
+        self.table_store.append(["Malayalam", "ml-in-g1.utb"])
 
-        self.language_combo1 = Gtk.ComboBoxText()
-        self.language_combo1.append_text("English")
-        self.language_combo1.append_text("Hindi")
-        self.language_combo1.append_text("Malayalam")
+        self.language_combo1 = Gtk.ComboBox()
+        self.language_combo1.set_model(self.table_store)
+        renderer_text3 = Gtk.CellRendererText()
+        self.language_combo1.pack_start(renderer_text3, True)
+        self.language_combo1.add_attribute(renderer_text3, "text", 0)
         self.language_combo1.set_active(0)
         self.language_combo1.set_size_request(225, 40)
-        self.language_combo1.connect("changed", self.on_combo_changed)
         box1.pack_start(self.language_combo1, False, False, 0)
 
         label.set_mnemonic_widget(self.language_combo1)
@@ -584,12 +587,6 @@ class MyWindow(Gtk.Window):
     def show_about_dialog(self, widget):
         self.about_dialog.run()
         self.about_dialog.hide()
-    
-    
-    def on_combo_changed(self, combo):
-        language_id = combo.get_active()
-        language_file = self.table_names[language_id][1]
-        louis.translateStringToFile(language_file, self.textview1.get_buffer(), self.textview2.get_buffer())
 
 
 
@@ -613,15 +610,12 @@ class MyWindow(Gtk.Window):
             text1 = buffer1.get_text(buffer1.get_start_iter(), buffer1.get_end_iter(), True)
 
         # Get the index of the selected language in the combo box
-        c = self.language_combo1.get_active()
+        language_active = self.language_combo1.get_active()
 
-        # Select the corresponding table based on the index
-        if c == 0:  # English
-            table = ['unicode.dis', 'en-us-g1.ctb']
-        elif c == 1:  # Hindi
-            table = ['unicode.dis', 'hi-in-g1.ctb']
-        elif c == 2:  # Malayalam
-            table = ['unicode.dis', 'ml-in-g1.ctb']
+        table_name = self.table_store[language_active][1]
+
+        table_list = ['unicode.dis']
+        table_list.append(table_name)
 
         # Get the cursor position in the second text view
         buffer2 = self.textview2.get_buffer()
@@ -633,7 +627,7 @@ class MyWindow(Gtk.Window):
         existing_text = buffer2.get_text(buffer2.get_start_iter(), buffer2.get_end_iter(), True)
 
         # Translate the text to Braille using the selected table
-        braille = louis.translate(table, text1)
+        braille = louis.translate(table_list, text1)
 
         # Shape the braille output for printer
         new_text = self.shape_text_with_line_limit(braille[0], line_limit)
