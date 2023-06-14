@@ -241,23 +241,34 @@ class MyWindow(Gtk.Window):
 
         # Create the "File" menu
         file_menu = Gtk.Menu()
+
+        accel_group = Gtk.AccelGroup()
+        self.add_accel_group(accel_group)
         
      
         new_item = Gtk.MenuItem.new_with_label("New")
         new_item.connect("activate", self.on_new_activated)
         file_menu.append(new_item)
+        key,mods=Gtk.accelerator_parse("<Ctrl>N")
+        new_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
 
         open_item = Gtk.MenuItem.new_with_label("Open")
         open_item.connect("activate", self.on_open_activated)
         file_menu.append(open_item)
+        key,mods=Gtk.accelerator_parse("<Ctrl>O")
+        open_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
 
         save_item = Gtk.MenuItem.new_with_label("Save")
         save_item.connect("activate", self.on_save_activated)
         file_menu.append(save_item)
+        key,mods=Gtk.accelerator_parse("<Ctrl>S")
+        save_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
 
         save_as_item = Gtk.MenuItem.new_with_label("Save As")
         save_as_item.connect("activate", self.on_save_as_activated)
         file_menu.append(save_as_item)
+        key,mods=Gtk.accelerator_parse("<Ctrl><shift>S")
+        save_as_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
 
         file_menu_item = Gtk.MenuItem.new_with_label("File")
         file_menu_item.set_submenu(file_menu)
@@ -268,20 +279,29 @@ class MyWindow(Gtk.Window):
         cut_item = Gtk.MenuItem.new_with_label("Cut")
         cut_item.connect("activate", self.on_cut_activated)
         edit_menu.append(cut_item)
+        key,mods=Gtk.accelerator_parse("<Ctrl>X")
+        cut_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
 
         copy_item = Gtk.MenuItem.new_with_label("Copy")
         copy_item.connect("activate", self.on_copy_activated)
         edit_menu.append(copy_item)
+        key,mods=Gtk.accelerator_parse("<Ctrl>C")
+        copy_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
 
         paste_item = Gtk.MenuItem.new_with_label("Paste")
         paste_item.connect("activate", self.on_paste_activated)
         edit_menu.append(paste_item)
+        key,mods=Gtk.accelerator_parse("<Ctrl>P")
+        paste_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
+
         
         goto_item = Gtk.MenuItem(label="Goto Line")
         edit_menu.append(Gtk.SeparatorMenuItem())
         edit_menu.append(goto_item)
-         # Connect Goto Line menu item to callback function
+        # Connect Goto Line menu item to callback function
         goto_item.connect("activate", self.on_goto_line_activate)
+        key,mods=Gtk.accelerator_parse("<Ctrl>G")
+        goto_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
 
 
         edit_menu.append(Gtk.SeparatorMenuItem())
@@ -289,10 +309,14 @@ class MyWindow(Gtk.Window):
         find = Gtk.MenuItem(label="Find")
         edit_menu.append(find)
         find.connect("activate", self.on_find_activate)
+        key,mods=Gtk.accelerator_parse("<Ctrl>F")
+        find.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
 
         find_and_replace = Gtk.MenuItem(label="Find and Replace")
         edit_menu.append(find_and_replace)
         find_and_replace.connect("activate", self.on_find_and_replace_activate)
+        key,mods=Gtk.accelerator_parse("<Ctrl>R")
+        find_and_replace.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
         
 
         edit_menu_item = Gtk.MenuItem.new_with_label("Edit")
