@@ -199,7 +199,7 @@ class MyWindow(Gtk.Window):
         self.grid.attach(box1, 0, 1, 1, 1)
 
         label = Gtk.Label()
-        label.set_label("Language: ")
+        label.set_label("Language")
         box1.pack_start(label, False, False, 0)
 
         self.table_names = [(0, 'en-us-g1.ctb'), (1, 'hi-in-g1.ctb'), (2, 'ml-in-g1.ctb')]
@@ -212,8 +212,10 @@ class MyWindow(Gtk.Window):
         self.language_combo1.set_size_request(225, 40)
         self.language_combo1.connect("changed", self.on_combo_changed)
         box1.pack_start(self.language_combo1, False, False, 0)
+
+        label.set_mnemonic_widget(self.language_combo1)
         
-        label = Gtk.Label("line limit:")
+        label = Gtk.Label("line limit")
         box1.pack_start(label, True, True, 0)
         
         # Create the spin button
@@ -223,6 +225,7 @@ class MyWindow(Gtk.Window):
         self.spin_button.set_increments(1, 10)  # Set the increment and page increment values
         box1.pack_start(self.spin_button, True, True, 0)
         
+        label.set_mnemonic_widget(self.spin_button)
         
 
         self.translate_button = Gtk.Button(label="Translate")
