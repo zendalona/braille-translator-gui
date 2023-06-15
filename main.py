@@ -28,7 +28,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, Pango
 import louis
 
-
+import os
 
 class MyWindow(Gtk.Window):
     def __init__(self):
@@ -202,9 +202,12 @@ class MyWindow(Gtk.Window):
         box1.pack_start(label, False, False, 0)
 
         self.table_store = Gtk.ListStore(str, str)
-        self.table_store.append(["English", "en-us-g1.ctb"])
-        self.table_store.append(["Hindi", "hi-in-g1.utb"])
-        self.table_store.append(["Malayalam", "ml-in-g1.utb"])
+
+        filename_with_path = os.getcwd()+"/language-table-dict.txt";
+        with open(filename_with_path, "r") as file:
+            for line in file:
+                stripped_line = line.strip()
+                self.table_store.append([stripped_line.split(" ")[0], stripped_line.split(" ")[1]])
 
         self.language_combo1 = Gtk.ComboBox()
         self.language_combo1.set_model(self.table_store)
