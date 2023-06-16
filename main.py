@@ -28,7 +28,9 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, Pango
 import louis
 
+import webbrowser
 import os
+
 
 class MyWindow(Gtk.Window):
     def __init__(self):
@@ -54,6 +56,9 @@ class MyWindow(Gtk.Window):
         help_menu = Gtk.Menu()
         help_menu.append(about_menu_item)
         
+        user_guide_menu_item = Gtk.MenuItem(label="User Guide")
+        user_guide_menu_item.connect("activate", self.open_user_guide)
+        help_menu.append(user_guide_menu_item)
         help_menu_item = Gtk.MenuItem(label="Help")
         help_menu_item.set_submenu(help_menu)
         
@@ -215,7 +220,7 @@ class MyWindow(Gtk.Window):
         self.language_combo1.pack_start(renderer_text3, True)
         self.language_combo1.add_attribute(renderer_text3, "text", 0)
         self.language_combo1.set_active(0)
-        self.language_combo1.set_size_request(225, 40)
+        self.language_combo1.set_size_request(200, 40)
         box1.pack_start(self.language_combo1, False, False, 0)
 
         label.set_mnemonic_widget(self.language_combo1)
@@ -241,7 +246,7 @@ class MyWindow(Gtk.Window):
         self.connect("key-press-event",self.on_key_press_event)
         
         self.textview1.grab_focus()
-        
+
 
     def create_menu(self, menubar):
 
@@ -514,9 +519,7 @@ class MyWindow(Gtk.Window):
 
             # Insert the clipboard content at the cursor position
             buffer.insert(cursor_iter, text)
-    
-            
-            
+         
             
             
     def on_find_activate(self, widget):
@@ -591,10 +594,12 @@ class MyWindow(Gtk.Window):
         self.about_dialog.run()
         self.about_dialog.hide()
 
-
-
-
-    
+    def open_user_guide(self,wedget,data=None):
+        url = "/path/to/user_guide_file.pdf"
+        try:
+            webbrowser.get("firefox").open(url, new=2)
+        except webbrowser.Error:
+            webbrowser.open(url, new=2)
 
     def on_translate_clicked(self, button):  #write button or widget
         line_limit = int(self.spin_button.get_value())  # Get the value of the spin button
@@ -732,6 +737,8 @@ class MyAboutDialog(Gtk.AboutDialog):
         self.set_authors(["Greeshna Sarath"])
         self.set_documenters(["Greeshna Sarath"])
         self.set_artists(["Nalin Sathyan" ,"Dr.Saritha Namboodiri", "Subha I N", "Bhavya P V", "K.Sathyaseelan"])  
+
+
 
 class Find(Gtk.Window):
 	def __init__ (self,textview):
