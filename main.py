@@ -38,8 +38,8 @@ class MyWindow(Gtk.Window):
         self.line_limit = 0
         #for both text fields to be vertical and spacing between them
 
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
-        self.add(vbox)
+        main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
+        self.add(main_vbox)
         
 
      
@@ -47,7 +47,7 @@ class MyWindow(Gtk.Window):
         
         menubar = Gtk.MenuBar()
         self.create_menu(menubar)
-        vbox.pack_start(menubar, False, False, 0)
+        main_vbox.pack_start(menubar, False, False, 0)
         
         
         about_menu_item = Gtk.MenuItem(label="About")
@@ -67,17 +67,60 @@ class MyWindow(Gtk.Window):
         # Create the about dialog
         self.about_dialog = MyAboutDialog(self)
         
+
+        box_primary_widgets = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        main_vbox.pack_start(box_primary_widgets,False,True,0)
+
+        label = Gtk.Label()
+        label.set_label("Language")
+        box_primary_widgets.pack_start(label, False, False, 0)
+
+        self.table_store = Gtk.ListStore(str, str)
+
+        filename_with_path = os.getcwd()+"/language-table-dict.txt";
+        with open(filename_with_path, "r") as file:
+            for line in file:
+                stripped_line = line.strip()
+                self.table_store.append([stripped_line.split(" ")[0], stripped_line.split(" ")[1]])
+
+        self.language_combo1 = Gtk.ComboBox()
+        self.language_combo1.set_model(self.table_store)
+        renderer_text3 = Gtk.CellRendererText()
+        self.language_combo1.pack_start(renderer_text3, True)
+        self.language_combo1.add_attribute(renderer_text3, "text", 0)
+        self.language_combo1.set_active(0)
+        self.language_combo1.set_size_request(200, 40)
+        box_primary_widgets.pack_start(self.language_combo1, False, False, 0)
+
+        label.set_mnemonic_widget(self.language_combo1)
         
+        label = Gtk.Label("line limit")
+        box_primary_widgets.pack_start(label, True, True, 0)
         
-        #grid layout allows you to align and organize widgets in a structured manner.specify the position of each widget within the grid
+        # Create the spin button
+        self.spin_button = Gtk.SpinButton()
+        self.spin_button.set_range(1, 100)  # Set the minimum and maximum values
+        self.spin_button.set_value(40)      # Set the initial value
+        self.spin_button.set_increments(1, 10)  # Set the increment and page increment values
+        box_primary_widgets.pack_start(self.spin_button, True, True, 0)
         
-        self.grid = Gtk.Grid()
-        self.grid.set_column_spacing(8)
-        vbox.pack_start(self.grid, True, True, 0)
+        label.set_mnemonic_widget(self.spin_button)
+        
+
+        self.translate_button = Gtk.Button(label="Translate")
+        self.translate_button.connect("clicked", self.on_translate_clicked)
+        box_primary_widgets.pack_end(self.translate_button, False, False, 0)
+        self.translate_button.set_size_request(225, 40)
+
+        
+        input_output_paned = Gtk.Paned()
+        input_output_paned.set_orientation(Gtk.Orientation.HORIZONTAL)
         
         #create first textview for input text using gtk textview 
 
         self.textview1 = Gtk.TextView()
+        self.textview1.set_accepts_tab(False)
+
         
         # wrap mode determines how text content is wrapped and displayed within the widget. here,wrap mode allows you to control how long lines of text are displayed within the textview. 
         
@@ -144,13 +187,14 @@ class MyWindow(Gtk.Window):
 
         box1 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box1.set_vexpand(True)
-        box1.pack_start(hbox1, False, True, 0)
         box1.pack_start(scrolled_win1, True, True, 0)
+        box1.pack_start(hbox1, False, True, 0)
 
-        self.grid.attach(box1, 0, 0, 1, 1)
+        input_output_paned.add1(box1)
 
         self.textview2 = Gtk.TextView()
         self.textview2.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.textview2.set_accepts_tab(False)
 
         
         hbox2 = Gtk.HBox()
@@ -194,59 +238,14 @@ class MyWindow(Gtk.Window):
 
         box2 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box2.set_vexpand(True)
-        box2.pack_start(hbox2, False, True, 0)
         box2.pack_start(scrolled_win2, True, True, 0)
+        box2.pack_start(hbox2, False, True, 0)
 
-        self.grid.attach(box2, 1, 0, 1, 1)
-
-        box1 = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        self.grid.attach(box1, 0, 1, 1, 1)
-
-        label = Gtk.Label()
-        label.set_label("Language")
-        box1.pack_start(label, False, False, 0)
-
-        self.table_store = Gtk.ListStore(str, str)
-
-        filename_with_path = os.getcwd()+"/language-table-dict.txt";
-        with open(filename_with_path, "r") as file:
-            for line in file:
-                stripped_line = line.strip()
-                self.table_store.append([stripped_line.split(" ")[0], stripped_line.split(" ")[1]])
-
-        self.language_combo1 = Gtk.ComboBox()
-        self.language_combo1.set_model(self.table_store)
-        renderer_text3 = Gtk.CellRendererText()
-        self.language_combo1.pack_start(renderer_text3, True)
-        self.language_combo1.add_attribute(renderer_text3, "text", 0)
-        self.language_combo1.set_active(0)
-        self.language_combo1.set_size_request(200, 40)
-        box1.pack_start(self.language_combo1, False, False, 0)
-
-        label.set_mnemonic_widget(self.language_combo1)
+        input_output_paned.add2(box2)
+        main_vbox.pack_start(input_output_paned,False,True,0)
         
-        label = Gtk.Label("line limit")
-        box1.pack_start(label, True, True, 0)
-        
-        # Create the spin button
-        self.spin_button = Gtk.SpinButton()
-        self.spin_button.set_range(1, 100)  # Set the minimum and maximum values
-        self.spin_button.set_value(40)      # Set the initial value
-        self.spin_button.set_increments(1, 10)  # Set the increment and page increment values
-        box1.pack_start(self.spin_button, True, True, 0)
-        
-        label.set_mnemonic_widget(self.spin_button)
-        
-
-        self.translate_button = Gtk.Button(label="Translate")
-        self.translate_button.connect("clicked", self.on_translate_clicked)
-        box1.pack_end(self.translate_button, False, False, 0)
-        self.translate_button.set_size_request(225, 40)
 
         self.connect("key-press-event",self.on_key_press_event)
-        
-        self.textview1.grab_focus()
-
 
     def create_menu(self, menubar):
 
