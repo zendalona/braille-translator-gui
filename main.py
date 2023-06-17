@@ -120,6 +120,7 @@ class MyWindow(Gtk.Window):
 
         self.textview1 = Gtk.TextView()
         self.textview1.set_accepts_tab(False)
+        self.textview1.set_tooltip_text("Input Text")
 
         
         # wrap mode determines how text content is wrapped and displayed within the widget. here,wrap mode allows you to control how long lines of text are displayed within the textview. 
@@ -195,6 +196,7 @@ class MyWindow(Gtk.Window):
         self.textview2 = Gtk.TextView()
         self.textview2.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         self.textview2.set_accepts_tab(False)
+        self.textview2.set_tooltip_text("Output Text")
 
         
         hbox2 = Gtk.HBox()
@@ -246,7 +248,11 @@ class MyWindow(Gtk.Window):
         
 
         self.connect("key-press-event",self.on_key_press_event)
+        
 
+
+ 
+        
     def create_menu(self, menubar):
 
         # Create the "File" menu
@@ -719,7 +725,7 @@ class MyWindow(Gtk.Window):
 	    font = widget.get_font_name();
 	    pangoFont = Pango.FontDescription(font)
 	    textview.modify_font(pangoFont)
-	    
+   
 
 class MyAboutDialog(Gtk.AboutDialog):
     def __init__(self, parent):
@@ -922,6 +928,7 @@ class FindAndReplace(Find):
 				self.match_start = self.match_end.copy()
 			else:
 				break
+
 
 if __name__ == "__main__":
     win = MyWindow()
