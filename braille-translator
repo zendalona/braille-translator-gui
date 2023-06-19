@@ -1,0 +1,9 @@
+#! /usr/bin/python3
+
+from BrailleTranslator.main import MyWindow
+
+if __name__ == "__main__":
+	MyWindow()
+   
+   
+Gtk.main()

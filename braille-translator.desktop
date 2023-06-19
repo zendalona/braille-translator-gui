@@ -7,6 +7,6 @@ Type=Application
 Terminal=false
 Exec=braille-translator
 Name=Braille-Translator
-Icon=python3
+Icon=/usr/share/BrailleTranslator/icon.jpg
 MimeType=text/plain;
 Keywords=text;editor;

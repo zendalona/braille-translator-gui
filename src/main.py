@@ -31,7 +31,6 @@ import louis
 import webbrowser
 import os
 
-
 class MyWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Braille Translator")
@@ -41,14 +40,11 @@ class MyWindow(Gtk.Window):
         main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add(main_vbox)
         
-
-     
         #create gtk menubar  and placed in top window
         
         menubar = Gtk.MenuBar()
         self.create_menu(menubar)
         main_vbox.pack_start(menubar, False, False, 0)
-        
         
         about_menu_item = Gtk.MenuItem(label="About")
         about_menu_item.connect("activate", self.show_about_dialog)
@@ -67,7 +63,6 @@ class MyWindow(Gtk.Window):
         # Create the about dialog
         self.about_dialog = MyAboutDialog(self)
         
-
         box_primary_widgets = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         main_vbox.pack_start(box_primary_widgets,False,True,0)
 
@@ -77,7 +72,7 @@ class MyWindow(Gtk.Window):
 
         self.table_store = Gtk.ListStore(str, str)
 
-        filename_with_path = os.getcwd()+"/language-table-dict.txt";
+        filename_with_path="///usr/share/BrailleTranslator/language-table-dict.txt";
         with open(filename_with_path, "r") as file:
             for line in file:
                 stripped_line = line.strip()
@@ -106,18 +101,15 @@ class MyWindow(Gtk.Window):
         
         label.set_mnemonic_widget(self.spin_button)
         
-
         self.translate_button = Gtk.Button(label="Translate")
         self.translate_button.connect("clicked", self.on_translate_clicked)
         box_primary_widgets.pack_end(self.translate_button, False, False, 0)
         self.translate_button.set_size_request(225, 40)
 
-        
         input_output_paned = Gtk.Paned()
         input_output_paned.set_orientation(Gtk.Orientation.HORIZONTAL)
         
         #create first textview for input text using gtk textview 
-
         self.textview1 = Gtk.TextView()
         self.textview1.set_accepts_tab(False)
         self.textview1.set_tooltip_text("Input Text")
@@ -180,7 +172,6 @@ class MyWindow(Gtk.Window):
         fixed = Gtk.Fixed()
         hbox1.pack_start(fixed,True,True,0)
 
-
         scrolled_win1 = Gtk.ScrolledWindow()
         scrolled_win1.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.ALWAYS)
         scrolled_win1.add(self.textview1)
@@ -197,8 +188,7 @@ class MyWindow(Gtk.Window):
         self.textview2.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         self.textview2.set_accepts_tab(False)
         self.textview2.set_tooltip_text("Output Text")
-
-        
+   
         hbox2 = Gtk.HBox()
         hbox2.set_hexpand(True)
         hbox2.set_vexpand(False)
@@ -231,8 +221,7 @@ class MyWindow(Gtk.Window):
         
         fixed = Gtk.Fixed()
         hbox2.pack_start(fixed,True,True,0)
-        
-
+    
         scrolled_win2 = Gtk.ScrolledWindow()
         scrolled_win2.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.ALWAYS)
         scrolled_win2.add(self.textview2)
@@ -245,13 +234,11 @@ class MyWindow(Gtk.Window):
 
         input_output_paned.add2(box2)
         main_vbox.pack_start(input_output_paned,False,True,0)
-        
-
+       
         self.connect("key-press-event",self.on_key_press_event)
         
-
-
- 
+  
+        self.show_all()
         
     def create_menu(self, menubar):
 
@@ -291,7 +278,9 @@ class MyWindow(Gtk.Window):
 
         # Create the "Edit" menu
         edit_menu = Gtk.Menu()
+        
 
+        
         cut_item = Gtk.MenuItem.new_with_label("Cut")
         cut_item.connect("activate", self.on_cut_activated)
         edit_menu.append(cut_item)
@@ -462,8 +451,9 @@ class MyWindow(Gtk.Window):
         # Save the text to the specified file
         with open(filename, "w") as file:
             file.write(text)
+            
 
-
+        
     def on_cut_activated(self, widget):
         # Get the focused text view
         focused_textview = self.get_focus()
@@ -930,8 +920,7 @@ class FindAndReplace(Find):
 				break
 
 
-if __name__ == "__main__":
-    win = MyWindow()
-    win.connect("destroy", Gtk.main_quit)
-    win.show_all()
-    Gtk.main()
+
+win = MyWindow()
+win.connect("destroy", Gtk.main_quit)
+Gtk.main()
