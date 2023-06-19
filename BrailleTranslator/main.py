@@ -72,7 +72,7 @@ class MyWindow(Gtk.Window):
 
         self.table_store = Gtk.ListStore(str, str)
 
-        filename_with_path="///usr/share/BrailleTranslator/language-table-dict.txt";
+        filename_with_path="/usr/share/BrailleTranslator/language-table-dict.txt";
         with open(filename_with_path, "r") as file:
             for line in file:
                 stripped_line = line.strip()
