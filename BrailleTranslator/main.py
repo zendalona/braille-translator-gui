@@ -31,17 +31,19 @@ import louis
 import webbrowser
 import os
 
-class MyWindow(Gtk.Window):
+import queue
+
+
+class BrailleTranslatorWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Braille Translator")
         self.line_limit = 0
-        #for both text fields to be vertical and spacing between them
 
+        #for both text fields to be vertical and spacing between them
         main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         self.add(main_vbox)
         
         #create gtk menubar  and placed in top window
-        
         menubar = Gtk.MenuBar()
         self.create_menu(menubar)
         main_vbox.pack_start(menubar, False, False, 0)
@@ -62,7 +64,7 @@ class MyWindow(Gtk.Window):
         
         # Create the about dialog
         self.about_dialog = MyAboutDialog(self)
-        
+
         box_primary_widgets = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         main_vbox.pack_start(box_primary_widgets,False,True,0)
 
@@ -113,14 +115,13 @@ class MyWindow(Gtk.Window):
         self.textview1 = Gtk.TextView()
         self.textview1.set_accepts_tab(False)
         self.textview1.set_tooltip_text("Input Text")
+        self.textview1.get_buffer().connect('insert-text', self.push_text_to_undobuffer1)
 
         
         # wrap mode determines how text content is wrapped and displayed within the widget. here,wrap mode allows you to control how long lines of text are displayed within the textview. 
-        
         self.textview1.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         
         #The theme store allows you to customize the visual appearance of your application.here used to create font color and background color of both textviews
-        
         self.theme_store = Gtk.ListStore(str, str, str)
         self.theme_store.append(["Default", "", ""])
         self.theme_store.append(["White on Black", "#FFFFFF", "#000000"])
@@ -188,6 +189,8 @@ class MyWindow(Gtk.Window):
         self.textview2.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         self.textview2.set_accepts_tab(False)
         self.textview2.set_tooltip_text("Output Text")
+        self.textview2.get_buffer().connect('insert-text', self.push_text_to_undobuffer2)
+
    
         hbox2 = Gtk.HBox()
         hbox2.set_hexpand(True)
@@ -237,8 +240,18 @@ class MyWindow(Gtk.Window):
        
         self.connect("key-press-event",self.on_key_press_event)
         
+        # Undo/Redo 
+        self.undo_queue1 = queue.LifoQueue()
+        self.redo_queue1 = queue.LifoQueue()
+        self.undo_queue2 = queue.LifoQueue()
+        self.redo_queue2 = queue.LifoQueue()
+        
+        # Add inetial text to undo_queue
+        self.push_text_to_undobuffer1()
+        self.push_text_to_undobuffer2()
   
         self.show_all()
+        Gtk.main()
         
     def create_menu(self, menubar):
 
@@ -247,8 +260,7 @@ class MyWindow(Gtk.Window):
 
         accel_group = Gtk.AccelGroup()
         self.add_accel_group(accel_group)
-        
-     
+            
         new_item = Gtk.MenuItem.new_with_label("New")
         new_item.connect("activate", self.on_new_activated)
         file_menu.append(new_item)
@@ -279,8 +291,6 @@ class MyWindow(Gtk.Window):
         # Create the "Edit" menu
         edit_menu = Gtk.Menu()
         
-
-        
         cut_item = Gtk.MenuItem.new_with_label("Cut")
         cut_item.connect("activate", self.on_cut_activated)
         edit_menu.append(cut_item)
@@ -299,7 +309,6 @@ class MyWindow(Gtk.Window):
         key,mods=Gtk.accelerator_parse("<Ctrl>P")
         paste_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
 
-        
         goto_item = Gtk.MenuItem(label="Goto Line")
         edit_menu.append(Gtk.SeparatorMenuItem())
         edit_menu.append(goto_item)
@@ -307,7 +316,6 @@ class MyWindow(Gtk.Window):
         goto_item.connect("activate", self.on_goto_line_activate)
         key,mods=Gtk.accelerator_parse("<Ctrl>G")
         goto_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
-
 
         edit_menu.append(Gtk.SeparatorMenuItem())
 
@@ -322,12 +330,23 @@ class MyWindow(Gtk.Window):
         find_and_replace.connect("activate", self.on_find_and_replace_activate)
         key,mods=Gtk.accelerator_parse("<Ctrl>R")
         find_and_replace.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
-        
+
+        edit_menu.append(Gtk.SeparatorMenuItem())
+
+        undo_menu_item = Gtk.MenuItem(label="Undo")
+        edit_menu.append(undo_menu_item)
+        undo_menu_item.connect("activate", self.undo)
+        key,mods=Gtk.accelerator_parse("<Ctrl>Z")
+        undo_menu_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
+
+        redo_menu_item = Gtk.MenuItem(label="Redo")
+        edit_menu.append(redo_menu_item)
+        redo_menu_item.connect("activate", self.redo)
+        key,mods=Gtk.accelerator_parse("<Shift><Ctrl>Z")
+        redo_menu_item.add_accelerator("activate", accel_group, key, mods,  Gtk.AccelFlags.VISIBLE)
 
         edit_menu_item = Gtk.MenuItem.new_with_label("Edit")
         edit_menu_item.set_submenu(edit_menu)
-        
-        
         
         # Add menu items to the menubar
         menubar.append(file_menu_item)
@@ -356,7 +375,6 @@ class MyWindow(Gtk.Window):
             self.on_translate_clicked(None)
 
     def on_new_activated(self, widget): 
-		
         # Clear the active text view and set focus to it
         if self.textview1.has_focus():
             self.textview1.get_buffer().set_text("")
@@ -368,7 +386,6 @@ class MyWindow(Gtk.Window):
             # Clear data in both text fields
             self.textview1.get_buffer().set_text("")
             self.textview2.get_buffer().set_text("")
-            
 
     def on_open_activated(self, widget):
 
@@ -412,7 +429,6 @@ class MyWindow(Gtk.Window):
 
         dialog.destroy()
 
-    
     def save_file(self, filename):
         # Get the focused text view
         focused_textview = self.get_focus()
@@ -426,8 +442,7 @@ class MyWindow(Gtk.Window):
         # Save the text to the specified file
         with open(filename, "w") as file:
             file.write(text)
-    
-            
+
     def on_save_as_activated(self, widget):
         dialog = Gtk.FileChooserDialog(title="Save As",parent=self,action=Gtk.FileChooserAction.SAVE,buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_SAVE, Gtk.ResponseType.OK),)
         dialog.set_do_overwrite_confirmation(True)
@@ -452,8 +467,6 @@ class MyWindow(Gtk.Window):
         with open(filename, "w") as file:
             file.write(text)
             
-
-        
     def on_cut_activated(self, widget):
         # Get the focused text view
         focused_textview = self.get_focus()
@@ -475,7 +488,6 @@ class MyWindow(Gtk.Window):
 
             # Delete the selected text from the buffer
             buffer.delete(start_iter, end_iter)
-            
             
     def on_copy_activated(self, widget):
         # Get the focused text view
@@ -514,16 +526,14 @@ class MyWindow(Gtk.Window):
 
             # Insert the clipboard content at the cursor position
             buffer.insert(cursor_iter, text)
-         
-            
-            
+           
     def on_find_activate(self, widget):
-	    focused_textview = self.get_focus()
-	    Find(focused_textview).show()
+        focused_textview = self.get_focus()
+        Find(focused_textview).show()
 
     def on_find_and_replace_activate(self, widget):
-	    focused_textview = self.get_focus()
-	    FindAndReplace(focused_textview).show()
+        focused_textview = self.get_focus()
+        FindAndReplace(focused_textview).show()
 
 
     def on_goto_line_activate(self, widget):
@@ -553,9 +563,6 @@ class MyWindow(Gtk.Window):
 
             # Set the default line number in the spin button
             spin_button.set_value(line_number)
-            
-            
-
         dialog.show_all()
         response = dialog.run()
 
@@ -582,9 +589,6 @@ class MyWindow(Gtk.Window):
         else:
             return None
 
-    
-    
-    
     def show_about_dialog(self, widget):
         self.about_dialog.run()
         self.about_dialog.hide()
@@ -644,78 +648,127 @@ class MyWindow(Gtk.Window):
             buffer2.place_cursor(cursor_iter)
             
     def shape_text_with_line_limit(self, input_text, length):
-	    output_text = ""
-	    character_count = -1
-	    for character in input_text:
-		    if(character_count == length):
-			    character_count = 0;
-			    output_text = output_text + "\n"
-		    else:
-			    character_count = character_count+1
-		    output_text = output_text+character
-	    return output_text
+        output_text = ""
+        character_count = -1
+        for character in input_text:
+            if(character_count == length):
+                character_count = 0;
+                output_text = output_text + "\n"
+            else:
+                character_count = character_count+1
+            output_text = output_text+character
+        return output_text
 
     def set_cursor_color(self, textview, color):
-	    colors_in_float = Gdk.color_parse(color).to_floats()
-	    cursor_color_hex = "#" + "".join(["%02x" % (int(color * 255)) for color in colors_in_float])
-		
-	    try:
-		    cssProvider = Gtk.CssProvider()
-		    cssProvider.load_from_data((" * {   caret-color: "+cursor_color_hex+";    }").encode('ascii'))
-		
-		    style = textview.get_style_context()
-		    style.add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-	    except:
-		    print("Unnable to set cursor color!")
+        colors_in_float = Gdk.color_parse(color).to_floats()
+        cursor_color_hex = "#" + "".join(["%02x" % (int(color * 255)) for color in colors_in_float])
+        
+        try:
+            cssProvider = Gtk.CssProvider()
+            cssProvider.load_from_data((" * {   caret-color: "+cursor_color_hex+";    }").encode('ascii'))
+        
+            style = textview.get_style_context()
+            style.add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+        except:
+            print("Unnable to set cursor color!")
 
 
     
     def set_selection_color(self, textview, font_color, background_color):
-	    color1 = Gdk.color_parse(font_color)
-	    color2 = Gdk.color_parse(background_color)
-	    
-	    selection_color = Gdk.Color((color1.red + color2.red)/2, (color1.green + color2.green)/2 ,(color1.blue + color2.blue)/2)
-	    
-	    selection_colors_in_float = selection_color.to_floats()
-	    
-	    selection_background_colors_in_float = color2.to_floats()
-	    
-	    selection_color_hex = "#" + "".join(["%02x" % (int(color * 255)) for color in selection_colors_in_float])
-	    
-	    selection_background_color_hex = "#" + "".join(["%02x" % (int(color * 255)) for color in selection_background_colors_in_float])
-	    
-	    try:
-		    cssProvider = Gtk.CssProvider()
-		    cssProvider.load_from_data((" * selection { color: "+selection_color_hex+";  background: "+selection_background_color_hex+";}").encode('ascii'))
-		
-		    style = textview.get_style_context()
-		    style.add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-	    except:
-		    print("Unnable to set selection color!")
+        color1 = Gdk.color_parse(font_color)
+        color2 = Gdk.color_parse(background_color)
+        
+        selection_color = Gdk.Color((color1.red + color2.red)/2, (color1.green + color2.green)/2 ,(color1.blue + color2.blue)/2)
+        
+        selection_colors_in_float = selection_color.to_floats()
+        
+        selection_background_colors_in_float = color2.to_floats()
+        
+        selection_color_hex = "#" + "".join(["%02x" % (int(color * 255)) for color in selection_colors_in_float])
+        
+        selection_background_color_hex = "#" + "".join(["%02x" % (int(color * 255)) for color in selection_background_colors_in_float])
+        
+        try:
+            cssProvider = Gtk.CssProvider()
+            cssProvider.load_from_data((" * selection { color: "+selection_color_hex+";  background: "+selection_background_color_hex+";}").encode('ascii'))
+        
+            style = textview.get_style_context()
+            style.add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
+        except:
+            print("Unnable to set selection color!")
 
     def on_theme_changed(self,widget, textview):
-	    theme = widget.get_active()
-	    
-	    font_color = self.theme_store[theme][1]
-	    background_color = self.theme_store[theme][2]
-	    
-	    if(theme == 0):
-		    textview.modify_fg(Gtk.StateFlags.NORMAL, None)
-		    textview.modify_bg(Gtk.StateFlags.NORMAL, None)
-		    font_color = "#000000" 
-		    background_color = "#ffffff"
-	    else:
-		    textview.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse(font_color))
-		    textview.modify_bg(Gtk.StateFlags.NORMAL, Gdk.color_parse(background_color ))
-	    self.set_cursor_color(textview, font_color)
-	    self.set_selection_color(textview, font_color, background_color)
+        theme = widget.get_active()
+        
+        font_color = self.theme_store[theme][1]
+        background_color = self.theme_store[theme][2]
+        
+        if(theme == 0):
+            textview.modify_fg(Gtk.StateFlags.NORMAL, None)
+            textview.modify_bg(Gtk.StateFlags.NORMAL, None)
+            font_color = "#000000" 
+            background_color = "#ffffff"
+        else:
+            textview.modify_fg(Gtk.StateFlags.NORMAL, Gdk.color_parse(font_color))
+            textview.modify_bg(Gtk.StateFlags.NORMAL, Gdk.color_parse(background_color ))
+        self.set_cursor_color(textview, font_color)
+        self.set_selection_color(textview, font_color, background_color)
 
 
     def on_font_set(self,widget, textview):
-	    font = widget.get_font_name();
-	    pangoFont = Pango.FontDescription(font)
-	    textview.modify_font(pangoFont)
-   
+        font = widget.get_font_name();
+        pangoFont = Pango.FontDescription(font)
+        textview.modify_font(pangoFont)
+
+    def undo(self,wedget,data=None):
+        if self.textview1.has_focus():
+            if( not self.undo_queue1.empty()):
+                text_in_queue = self.undo_queue1.get()
+                buffer = self.textview1.get_buffer()
+                start_iter, end_iter = buffer.get_bounds()
+                text_in_view = buffer.get_text(start_iter, end_iter, True)
+                buffer.set_text(text_in_queue)
+                self.redo_queue1.put(text_in_view)
+        elif self.textview2.has_focus():
+            if( not self.undo_queue2.empty()):
+                text_in_queue = self.undo_queue2.get()
+                buffer = self.textview2.get_buffer()
+                start_iter, end_iter = buffer.get_bounds()
+                text_in_view = buffer.get_text(start_iter, end_iter, True)
+                buffer.set_text(text_in_queue)
+                self.redo_queue2.put(text_in_view)
+
+    def redo(self,wedget,data=None):
+        if self.textview1.has_focus():
+            if( not self.redo_queue1.empty()):
+                text_in_queue = self.redo_queue1.get()
+                buffer = self.textview1.get_buffer()
+                start_iter, end_iter = buffer.get_bounds()
+                text_in_view = buffer.get_text(start_iter, end_iter, True)
+                buffer.set_text(text_in_queue)
+                self.undo_queue1.put(text_in_view)
+        elif self.textview2.has_focus():
+            if( not self.redo_queue2.empty()):
+                text_in_queue = self.redo_queue2.get()
+                buffer = self.textview2.get_buffer()
+                start_iter, end_iter = buffer.get_bounds()
+                text_in_view = buffer.get_text(start_iter, end_iter, True)
+                buffer.set_text(text_in_queue)
+                self.undo_queue2.put(text_in_view)
+
+    def push_text_to_undobuffer1(self, data1=None, data2=None, data3=None, data4=None):
+        print("Pushing to undo 1")
+        buffer = self.textview1.get_buffer()
+        start_iter, end_iter = buffer.get_bounds()
+        text = buffer.get_text(start_iter, end_iter, True)
+        self.undo_queue1.put(text)
+
+    def push_text_to_undobuffer2(self, data1=None, data2=None, data3=None, data4=None):
+        print("Pushing to undo 2")
+        buffer = self.textview2.get_buffer()
+        start_iter, end_iter = buffer.get_bounds()
+        text = buffer.get_text(start_iter, end_iter, True)
+        self.undo_queue2.put(text)
 
 class MyAboutDialog(Gtk.AboutDialog):
     def __init__(self, parent):
@@ -733,194 +786,180 @@ class MyAboutDialog(Gtk.AboutDialog):
         self.set_documenters(["Greeshna Sarath"])
         self.set_artists(["Nalin Sathyan" ,"Dr.Saritha Namboodiri", "Subha I N", "Bhavya P V", "K.Sathyaseelan"])  
 
-
-
 class Find(Gtk.Window):
-	def __init__ (self,textview):
-		Gtk.Window.__init__(self, title="Find")
-		
-		self.textbuffer = textview.get_buffer();
-		self.textview = textview;
-				
-		mark = self.textbuffer.get_insert()
-		self.iter = self.textbuffer.get_iter_at_mark(mark)
-		self.match_start = self.iter.copy()
-		self.match_start.backward_word_start()
-		self.match_end = self.iter.copy()
-		self.match_end.forward_word_end()
-		
-		
-		self.tag = self.textbuffer.create_tag(foreground = "Blue")
+    def __init__ (self,textview):
+        Gtk.Window.__init__(self, title="Find")
+        
+        self.textbuffer = textview.get_buffer();
+        self.textview = textview;
+                
+        mark = self.textbuffer.get_insert()
+        self.iter = self.textbuffer.get_iter_at_mark(mark)
+        self.match_start = self.iter.copy()
+        self.match_start.backward_word_start()
+        self.match_end = self.iter.copy()
+        self.match_end.forward_word_end()
+        self.tag = self.textbuffer.create_tag(foreground = "Blue")
+        self.vbox = Gtk.VBox()
+        self.vbox2 = Gtk.VBox()
+        self.entry = Gtk.Entry()
+        
+        label = Gtk.Label()
+        label.set_text("Search for : ")
+        label.set_mnemonic_widget(self.entry)
+
+        hbox = Gtk.HBox()            
+        hbox.pack_start(label,True,True,0)
+        hbox.pack_start(self.entry,True,True,0)
+        label.show()
+        self.entry.show()
+        hbox.set_hexpand(True)
+        hbox.set_vexpand(False)
+        self.vbox2.pack_start(hbox, True, True, 0)
+        self.vbox.pack_start(self.vbox2, True, True, 0)
+        self.context_label = Gtk.Label()
+        self.vbox.pack_start(self.context_label, True, True, 0)
+        
+        # Buttons
+        hbox2 = Gtk.HBox()
+
+        button_next = Gtk.Button(label="Next")
+        button_next.connect("clicked", self.find_next)
+        hbox2.pack_start(button_next,True,True,0)
+
+        button_previous = Gtk.Button(label="Previous")
+        button_previous.connect("clicked", self.find_previous)        
+        hbox2.pack_start(button_previous,True,True,0)
+
+        button_close = Gtk.Button(label="Close")
+        button_close.connect("clicked", self.close)
+        hbox2.pack_start(button_close,True,True,0)
+
+        self.vbox.pack_start(hbox2, True, True, 0)
+        
+        self.add(self.vbox)
+        self.vbox.show_all()
 
 
-		self.vbox = Gtk.VBox()
-		
-		self.vbox2 = Gtk.VBox()
-		
-		self.entry = Gtk.Entry()
+    def close(self,widget,data=None):
+        start,end = self.textbuffer.get_bounds()
+        self.textbuffer.remove_all_tags(start,end)
+        self.destroy()    
 
-		label = Gtk.Label()
-		label.set_text("Search for : ")
-		label.set_mnemonic_widget(self.entry)
+    def trim_context_text(self,text):
+        """cut the line if it is too lengthy (more than 10 words)
+        without rearranging existing lines. This will avoid the resizing of spell window"""
+        new_text = ""
+        for line in text.split('\n'):
+            if (len(line.split(' ')) > 10):
+                new_line = ""
+                pos = 1
+                for word in line.split(" "):
+                    new_line += word
+                    pos += 1
+                    if (pos % 10 == 0):
+                        new_line += '\n'
+                    else:
+                        new_line += ' '
 
-		hbox = Gtk.HBox()			
-		hbox.pack_start(label,True,True,0)
-		hbox.pack_start(self.entry,True,True,0)
-		label.show()
-		self.entry.show()
-		hbox.set_hexpand(True)
-		hbox.set_vexpand(False)
-		self.vbox2.pack_start(hbox, True, True, 0)
-		self.vbox.pack_start(self.vbox2, True, True, 0)
-		
+                new_text += new_line
+                if (pos % 10 > 3):
+                    new_text += '\n'
+            else:
+                new_text += line + '\n'
+        return new_text
+    
+    def find_next(self,widget,data=None):
+        self.find(True)
 
-		self.context_label = Gtk.Label()
-		self.vbox.pack_start(self.context_label, True, True, 0)
-		
-		# Buttons
-		hbox2 = Gtk.HBox()
-
-		button_next = Gtk.Button(label="Next")
-		button_next.connect("clicked", self.find_next)
-		hbox2.pack_start(button_next,True,True,0)
-
-		button_previous = Gtk.Button(label="Previous")
-		button_previous.connect("clicked", self.find_previous)		
-		hbox2.pack_start(button_previous,True,True,0)
-
-		button_close = Gtk.Button(label="Close")
-		button_close.connect("clicked", self.close)
-		hbox2.pack_start(button_close,True,True,0)
-
-		self.vbox.pack_start(hbox2, True, True, 0)
-		
-		self.add(self.vbox)
-		self.vbox.show_all()
-		
-				
-
-	def close(self,widget,data=None):
-		start,end = self.textbuffer.get_bounds()
-		self.textbuffer.remove_all_tags(start,end)
-		self.destroy()	
-
-	def trim_context_text(self,text):
-		"""cut the line if it is too lengthy (more than 10 words)
-		without rearranging existing lines. This will avoid the resizing of spell window"""
-		new_text = ""
-		for line in text.split('\n'):
-			if (len(line.split(' ')) > 10):
-				new_line = ""
-				pos = 1
-				for word in line.split(" "):
-					new_line += word
-					pos += 1
-					if (pos % 10 == 0):
-						new_line += '\n'
-					else:
-						new_line += ' '
-
-				new_text += new_line
-				if (pos % 10 > 3):
-					new_text += '\n'
-			else:
-				new_text += line + '\n'
-		return new_text
-	
-	def find_next(self,widget,data=None):
-		self.find(True)
-
-	def find_previous(self,widget,data=None):
-		self.find(False)		
-		
-	def find(self,data):
-		word = self.entry.get_text()
-		start , end = self.textbuffer.get_bounds()
-		if (data == True):
-			self.match_start.forward_word_end()
-			results = self.match_start.forward_search(word, 0, end)
-		else:
-			self.match_end.backward_word_start()
-			results = self.match_end.backward_search(word, 0,start)
-		
-		if results:
-			self.textbuffer.remove_all_tags(start,end)
-			self.match_start, self.match_end = results
-			self.textbuffer.place_cursor(self.match_start)
-			self.textbuffer.apply_tag(self.tag,self.match_start, self.match_end)
-			self.textview.scroll_to_iter(self.match_start, 0.2, use_align=False, xalign=0.5, yalign=0.5)
-			sentence_start=self.match_start.copy()
-			sentence_start.backward_sentence_start()
-			sentence_end=self.match_start.copy()
-			sentence_end.forward_sentence_end()
-			sentence = self.textbuffer.get_text(sentence_start,sentence_end,True)
-			self.context_label.set_text(self.trim_context_text(sentence))
-			self.context_label.grab_focus()
-		else:
-			self.context_label.set_text("Word {0} Not found".format(word))
-			self.context_label.grab_focus()
+    def find_previous(self,widget,data=None):
+        self.find(False)        
+        
+    def find(self,data):
+        word = self.entry.get_text()
+        start , end = self.textbuffer.get_bounds()
+        if (data == True):
+            self.match_start.forward_word_end()
+            results = self.match_start.forward_search(word, 0, end)
+        else:
+            self.match_end.backward_word_start()
+            results = self.match_end.backward_search(word, 0,start)
+        
+        if results:
+            self.textbuffer.remove_all_tags(start,end)
+            self.match_start, self.match_end = results
+            self.textbuffer.place_cursor(self.match_start)
+            self.textbuffer.apply_tag(self.tag,self.match_start, self.match_end)
+            self.textview.scroll_to_iter(self.match_start, 0.2, use_align=False, xalign=0.5, yalign=0.5)
+            sentence_start=self.match_start.copy()
+            sentence_start.backward_sentence_start()
+            sentence_end=self.match_start.copy()
+            sentence_end.forward_sentence_end()
+            sentence = self.textbuffer.get_text(sentence_start,sentence_end,True)
+            self.context_label.set_text(self.trim_context_text(sentence))
+            self.context_label.grab_focus()
+        else:
+            self.context_label.set_text("Word {0} Not found".format(word))
+            self.context_label.grab_focus()
 
 class FindAndReplace(Find):
-	def __init__(self,textview):
-		Find.__init__(self,textview)
-		
-		self.set_title("Find and Replace")
+    def __init__(self,textview):
+        Find.__init__(self,textview)
+        self.set_title("Find and Replace")
+        self.replace_entry = Gtk.Entry()
 
-		self.replace_entry = Gtk.Entry()
+        label = Gtk.Label()
+        label.set_text("Replace with : ")
+        label.set_mnemonic_widget(self.replace_entry)
 
-		label = Gtk.Label()
-		label.set_text("Replace with : ")
-		label.set_mnemonic_widget(self.replace_entry)
+        box = Gtk.HBox()            
+        box.pack_start(label,True,True,0)
+        box.pack_start(self.replace_entry,True,True,0)
+        label.show()
+        self.replace_entry.show()
+        box.set_hexpand(True)
+        box.set_vexpand(False)
+        
+        self.vbox2.pack_start(box,True,True,0)
+        self.vbox2.show_all()
 
-		box = Gtk.HBox()			
-		box.pack_start(label,True,True,0)
-		box.pack_start(self.replace_entry,True,True,0)
-		label.show()
-		self.replace_entry.show()
-		box.set_hexpand(True)
-		box.set_vexpand(False)
-		
-		self.vbox2.pack_start(box,True,True,0)
-		self.vbox2.show_all()
+        # Buttons
+        hbox2 = Gtk.HBox()
 
-		# Buttons
-		hbox2 = Gtk.HBox()
+        button_replace = Gtk.Button(label="Replace")
+        button_replace.connect("clicked", self.replace)
+        hbox2.pack_start(button_replace,True,True,0)
 
-		button_replace = Gtk.Button(label="Replace")
-		button_replace.connect("clicked", self.replace)
-		hbox2.pack_start(button_replace,True,True,0)
+        button_replace_all = Gtk.Button(label="Replace All")
+        button_replace_all.connect("clicked", self.replace_all)        
+        hbox2.pack_start(button_replace_all,True,True,0)
 
-		button_replace_all = Gtk.Button(label="Replace All")
-		button_replace_all.connect("clicked", self.replace_all)		
-		hbox2.pack_start(button_replace_all,True,True,0)
-
-		self.vbox.pack_start(hbox2,True,True,0)
-		self.vbox.show_all()
-		
-	def replace(self,widget,data=None):
-		replace_word = self.replace_entry.get_text()
-		self.textbuffer.delete(self.match_start, self.match_end)
-		self.textbuffer.insert(self.match_end,replace_word)
-		self.match_start = self.match_end.copy()
-		self.find(True)
-	
-	def replace_all(self,widget,data=None):
-		word = self.entry.get_text()
-		replace_word = self.replace_entry.get_text()
-		end = self.textbuffer.get_end_iter()
-		while(True):
-			self.match_start.forward_word_end()
-			results = self.match_start.forward_search(word, 0, end)
-			if results:
-				self.match_start, self.match_end = results
-				self.textbuffer.delete(self.match_start, self.match_end)
-				self.textbuffer.insert(self.match_end,replace_word)
-				self.match_start = self.match_end.copy()
-			else:
-				break
+        self.vbox.pack_start(hbox2,True,True,0)
+        self.vbox.show_all()
+        
+    def replace(self,widget,data=None):
+        replace_word = self.replace_entry.get_text()
+        self.textbuffer.delete(self.match_start, self.match_end)
+        self.textbuffer.insert(self.match_end,replace_word)
+        self.match_start = self.match_end.copy()
+        self.find(True)
+    
+    def replace_all(self,widget,data=None):
+        word = self.entry.get_text()
+        replace_word = self.replace_entry.get_text()
+        end = self.textbuffer.get_end_iter()
+        while(True):
+            self.match_start.forward_word_end()
+            results = self.match_start.forward_search(word, 0, end)
+            if results:
+                self.match_start, self.match_end = results
+                self.textbuffer.delete(self.match_start, self.match_end)
+                self.textbuffer.insert(self.match_end,replace_word)
+                self.match_start = self.match_end.copy()
+            else:
+                break
 
 
-
-win = MyWindow()
-win.connect("destroy", Gtk.main_quit)
-Gtk.main()
+if __name__ == "__main__":
+    win = BrailleTranslatorWindow()
+    win.connect("destroy", Gtk.main_quit)
