@@ -86,27 +86,28 @@ class BrailleTranslatorWindow(Gtk.Window):
         self.language_combo1.pack_start(renderer_text3, True)
         self.language_combo1.add_attribute(renderer_text3, "text", 0)
         self.language_combo1.set_active(0)
-        self.language_combo1.set_size_request(200, 40)
+        #self.language_combo1.set_size_request(200, 40)
         box_primary_widgets.pack_start(self.language_combo1, False, False, 0)
 
         label.set_mnemonic_widget(self.language_combo1)
         
         label = Gtk.Label("line limit")
-        box_primary_widgets.pack_start(label, True, True, 0)
+        box_primary_widgets.pack_start(label, False, False, 0)
         
         # Create the spin button
         self.spin_button = Gtk.SpinButton()
         self.spin_button.set_range(1, 100)  # Set the minimum and maximum values
         self.spin_button.set_value(40)      # Set the initial value
         self.spin_button.set_increments(1, 10)  # Set the increment and page increment values
-        box_primary_widgets.pack_start(self.spin_button, True, True, 0)
+        #self.set_size_request(225, 40)
+        box_primary_widgets.pack_start(self.spin_button, False, False, 0)
         
         label.set_mnemonic_widget(self.spin_button)
         
         self.translate_button = Gtk.Button(label="Translate")
         self.translate_button.connect("clicked", self.on_translate_clicked)
-        box_primary_widgets.pack_end(self.translate_button, False, False, 0)
-        self.translate_button.set_size_request(225, 40)
+        box_primary_widgets.pack_start(self.translate_button, True, True, 0)
+        #self.translate_button.set_size_request(325, 50)
 
         input_output_paned = Gtk.Paned()
         input_output_paned.set_orientation(Gtk.Orientation.HORIZONTAL)
@@ -679,13 +680,9 @@ class BrailleTranslatorWindow(Gtk.Window):
         color2 = Gdk.color_parse(background_color)
         
         selection_color = Gdk.Color((color1.red + color2.red)/2, (color1.green + color2.green)/2 ,(color1.blue + color2.blue)/2)
-        
         selection_colors_in_float = selection_color.to_floats()
-        
         selection_background_colors_in_float = color2.to_floats()
-        
         selection_color_hex = "#" + "".join(["%02x" % (int(color * 255)) for color in selection_colors_in_float])
-        
         selection_background_color_hex = "#" + "".join(["%02x" % (int(color * 255)) for color in selection_background_colors_in_float])
         
         try:
