@@ -789,10 +789,10 @@ class BrailleTranslatorWindow(Gtk.Window):
     #line limit        
     def shape_text_with_line_limit(self, input_text, length):
         output_text = ""
-        character_count = -1
+        character_count = 0
         for character in input_text:
             if(character_count == length):
-                character_count = 0;
+                character_count = 1;
                 output_text = output_text + "\n"
             else:
                 character_count = character_count+1
