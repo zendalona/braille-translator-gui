@@ -33,6 +33,7 @@
 Before running the Braille-Translator-GUI, make sure you have the following prerequisites installed:
 
 - Python3 
+- GTK
 
 
 ### Installation
@@ -40,17 +41,20 @@ Before running the Braille-Translator-GUI, make sure you have the following prer
 1. Clone this repository to your local machine:
 
    ```bash
-   git clone https://github.com/zendalona/braille-translator-gui.git
+   git clone https://github.com/zendalona/braille-translator-gui
    ```
 
 2. Navigate to the project directory:
 
    ```bash
+   
    cd braille-translator-gui
    ```
 
 3. To run:
     ```bash
+    
+    Python3 setup.py install --install-data=/usr
      
     ```
 
