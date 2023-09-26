@@ -54,8 +54,7 @@ Before running the Braille-Translator-GUI, make sure you have the following prer
 3. To install:
     ```bash
     
-    sudo python3 setup.py install --install-data=/usr
-     
+    sudo python3 setup.py install --install-data=/usr 
     ```
 
 
@@ -87,12 +86,7 @@ Before running the Braille-Translator-GUI, make sure you have the following prer
 - Use the spin button at the bottom of the Braille editor to set the desired number of lines for your Braille output. 
 
 
-
-
 ## Project Information
 
-- **Operating System**: Linux
-- **Programing language**: Python
-- **FrameWork**:GTK
-
-For more details on the project setup, configuration, and development, please refer to the project's code and documentation.
+- **Programing language**: Python-3
+- **GUI FrameWork**:GTK
