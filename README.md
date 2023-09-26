@@ -32,9 +32,9 @@
 
 Before running the Braille-Translator-GUI, make sure you have the following prerequisites installed:
 
-- Python3 
-- GTK
-
+- Python-3
+- Liblouis
+- GTK+ 3
 
 ### Installation
 
@@ -51,10 +51,10 @@ Before running the Braille-Translator-GUI, make sure you have the following prer
    cd braille-translator-gui
    ```
 
-3. To run:
+3. To install:
     ```bash
     
-    Python3 setup.py install --install-data=/usr
+    sudo python3 setup.py install --install-data=/usr
      
     ```
 
