@@ -7,6 +7,6 @@ Type=Application
 Terminal=false
 Exec=braille-translator
 Name=Braille-Translator
-Icon=/usr/share/BrailleTranslator/icon.jpg
+Icon=/usr/share/BrailleTranslator/GUI.png
 MimeType=text/plain;
 Keywords=text;editor;
