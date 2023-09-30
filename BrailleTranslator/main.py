@@ -27,6 +27,8 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, Pango
 
+from BrailleTranslator import utils
+
 # braille translation
 import louis
 
@@ -365,6 +367,13 @@ class BrailleTranslatorWindow(Gtk.Window):
         save_as_item.add_accelerator("activate", accel_group, key, mods,  
         Gtk.AccelFlags.VISIBLE)
 
+        save_as_brf_item = Gtk.MenuItem.new_with_label("Save as BRF")
+        save_as_brf_item.connect("activate", self.on_save_as_brf_activated)
+        file_menu.append(save_as_brf_item)
+        #key,mods=Gtk.accelerator_parse("<Ctrl>S")
+        #save_as_brf_item.add_accelerator("activate", accel_group, key, mods,
+        #Gtk.AccelFlags.VISIBLE)
+
         file_menu_item = Gtk.MenuItem.new_with_label("File")
         file_menu_item.set_submenu(file_menu)
 
@@ -486,6 +495,8 @@ class BrailleTranslatorWindow(Gtk.Window):
 
     #open
     def on_open_activated(self, widget):
+        focused_textview = self.get_focus()
+
         dialog = Gtk.FileChooserDialog(
         title="Open", parent=self, 
         action=Gtk.FileChooserAction.OPEN
@@ -499,28 +510,25 @@ class BrailleTranslatorWindow(Gtk.Window):
         response = dialog.run()
         if response == Gtk.ResponseType.OK:
             filename = dialog.get_filename()
-        
-            # Determine the focused text view and load the file there
-            focused_textview = self.get_focus()
-            if focused_textview == self.textview1:
-                self.load_text(filename, self.textview1)
-            elif focused_textview == self.textview2:
-                self.load_text(filename, self.textview2)
-        
+
+            # Load the BRF (Braille Ready Format) to braille view
+            # If not BRF, Determine the focused text view and load the file there
+            if(filename.endswith(".brf")):
+                self.load_text(filename, self.textview2, True)
+            else:
+                if focused_textview == self.textview2:
+                    self.load_text(filename, self.textview2)
+                else:
+                    self.load_text(filename, self.textview1)
         dialog.destroy()
 
 
-    def load_file(self, filename):
-        #Load the contents of the file and set it to the active text view
-        if self.textview1.has_focus():
-            self.load_text(filename, self.textview1)
-        elif self.textview2.has_focus():
-            self.load_text(filename, self.textview2)
-
-    def load_text(self, filename, textview):
+    def load_text(self, filename, textview, brf=False):
         with open(filename, "r") as file:
             text = file.read()
             buffer = textview.get_buffer()
+            if(brf):
+                text = utils.braille_ASCII_to_braille_unicode(text)
             buffer.set_text(text)
     
     #save
@@ -570,21 +578,48 @@ class BrailleTranslatorWindow(Gtk.Window):
             self.save_file(filename)
 
         dialog.destroy()
-        
-    def save_as_file(self, filename):
 
-        # Get the focused text view
-        focused_textview = self.get_focus()
-        buffer = focused_textview.get_buffer()
+    #save_as_brf
+    def on_save_as_brf_activated(self, widget):
+        dialog = Gtk.FileChooserDialog(
+        title="Save as brf",
+        parent=self,action=Gtk.FileChooserAction.SAVE,
+        buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+        Gtk.STOCK_SAVE, Gtk.ResponseType.OK),
+        )
+        
+        dialog.set_do_overwrite_confirmation(True)
+
+        filter_brf = Gtk.FileFilter()
+        filter_brf.set_name("BRF (Braille Ready Format)")
+        filter_brf.add_pattern("*.brf")
+        dialog.add_filter(filter_brf)
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            filename = dialog.get_filename()
+            self.save_as_brf_file(filename)
+
+        dialog.destroy()
+
+    def save_as_brf_file(self, filename):
+
+        # Only output will be saved as brf
+        buffer = self.textview2.get_buffer()
 
         # Get the text from the buffer
         start_iter = buffer.get_start_iter()
         end_iter = buffer.get_end_iter()
         text = buffer.get_text(start_iter, end_iter, True)
 
+        text_in_brf = utils.braille_unicode_to_braille_ASCII(text)
+
         # Save the text to the specified file
-        with open(filename, "w") as file:
-            file.write(text)
+        with open(filename, "wb") as file:
+            file.write(text_in_brf.encode())
+            file.write("\n".encode())
+            file.write("\n".encode())
+            file.write(bytes([26]))
     
     #cut       
     def on_cut_activated(self, widget):
