@@ -349,6 +349,7 @@ class BrailleTranslatorWindow(Gtk.Window):
         self.push_text_to_undobuffer2()
   
         self.show_all()
+        self.connect("destroy", self.quit);
         Gtk.main()
         
     #menu function
@@ -1000,6 +1001,10 @@ class BrailleTranslatorWindow(Gtk.Window):
         start_iter, end_iter = buffer.get_bounds()
         text = buffer.get_text(start_iter, end_iter, True)
         self.undo_queue2.put(text)
+
+    def quit(self,widget, data=None):
+        self.destroy()
+        Gtk.main_quit()
 
 class MyAboutDialog(Gtk.AboutDialog):
     def __init__(self, parent):
