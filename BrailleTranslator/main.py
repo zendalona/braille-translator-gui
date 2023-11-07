@@ -27,6 +27,9 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, Pango
 
+from BrailleTranslator import utils
+from BrailleTranslator import preferences
+
 # braille translation
 import louis
 
@@ -38,10 +41,16 @@ import os
 #for undo/redo
 import queue
 
+user_preferences_file_path = os.environ['HOME']+'/.braille-translator.cfg'
 
 class BrailleTranslatorWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Braille Translator")
+
+        # User Preferences
+        self.pref = preferences.Preferences()
+        self.pref.load_preferences_from_file(user_preferences_file_path)
+
         self.line_limit = 0
 
         #for both text fields to be vertical and spacing between them
@@ -110,8 +119,11 @@ class BrailleTranslatorWindow(Gtk.Window):
         renderer_text3 = Gtk.CellRendererText()
         self.language_combo1.pack_start(renderer_text3, True)
         self.language_combo1.add_attribute(renderer_text3, "text", 0)
-        self.language_combo1.set_active(0)
+        self.language_combo1.set_active(self.pref.language)
         #self.language_combo1.set_size_request(200, 40)
+        self.language_combo1.connect(
+        "changed", self.on_language_changed,
+        )
         box_primary_widgets.pack_start(
         self.language_combo1, False, False, 0
         )
@@ -202,6 +214,11 @@ class BrailleTranslatorWindow(Gtk.Window):
         "font-set", self.on_font_set, 
         self.textview1
         )
+        self.font_button.set_font(self.pref.font_1)
+
+        # calling on_font_set manually because set_font wont trigger "font-set" signal
+        self.on_font_set(self.font_button, self.textview1);
+
         label.set_mnemonic_widget(self.font_button)
         hbox1.pack_start(label,False,True,0)
         hbox1.pack_start(self.font_button,False,True,0)
@@ -223,6 +240,7 @@ class BrailleTranslatorWindow(Gtk.Window):
         self.combobox_theme.connect(
         "changed", self.on_theme_changed, self.textview1
         )
+        self.combobox_theme.set_active(self.pref.theme_1);
         label.set_mnemonic_widget(self.combobox_theme)
         hbox1.pack_start(label,False,True,0)
         hbox1.pack_start(self.combobox_theme,False,True,0)
@@ -268,6 +286,10 @@ class BrailleTranslatorWindow(Gtk.Window):
         label.set_mnemonic_widget(self.font_button2)
         hbox2.pack_start(label,False,True,0)
         hbox2.pack_start(self.font_button2,False,True,0)
+        self.font_button2.set_font(self.pref.font_2)
+
+        # calling on_font_set manually because set_font wont trigger "font-set" signal
+        self.on_font_set(self.font_button2, self.textview2);
 
         fixed = Gtk.Fixed()
         hbox2.pack_start(fixed,True,True,0)
@@ -289,6 +311,7 @@ class BrailleTranslatorWindow(Gtk.Window):
         self.combobox_theme2.connect(
         "changed", self.on_theme_changed, self.textview2
         )
+        self.combobox_theme2.set_active(self.pref.theme_2);
         
         label.set_mnemonic_widget(self.combobox_theme2)
         
@@ -364,6 +387,13 @@ class BrailleTranslatorWindow(Gtk.Window):
         key,mods=Gtk.accelerator_parse("<Ctrl><shift>S")
         save_as_item.add_accelerator("activate", accel_group, key, mods,  
         Gtk.AccelFlags.VISIBLE)
+
+        save_as_brf_item = Gtk.MenuItem.new_with_label("Save as BRF")
+        save_as_brf_item.connect("activate", self.on_save_as_brf_activated)
+        file_menu.append(save_as_brf_item)
+        #key,mods=Gtk.accelerator_parse("<Ctrl>S")
+        #save_as_brf_item.add_accelerator("activate", accel_group, key, mods,
+        #Gtk.AccelFlags.VISIBLE)
 
         file_menu_item = Gtk.MenuItem.new_with_label("File")
         file_menu_item.set_submenu(file_menu)
@@ -486,6 +516,8 @@ class BrailleTranslatorWindow(Gtk.Window):
 
     #open
     def on_open_activated(self, widget):
+        focused_textview = self.get_focus()
+
         dialog = Gtk.FileChooserDialog(
         title="Open", parent=self, 
         action=Gtk.FileChooserAction.OPEN
@@ -499,28 +531,25 @@ class BrailleTranslatorWindow(Gtk.Window):
         response = dialog.run()
         if response == Gtk.ResponseType.OK:
             filename = dialog.get_filename()
-        
-            # Determine the focused text view and load the file there
-            focused_textview = self.get_focus()
-            if focused_textview == self.textview1:
-                self.load_text(filename, self.textview1)
-            elif focused_textview == self.textview2:
-                self.load_text(filename, self.textview2)
-        
+
+            # Load the BRF (Braille Ready Format) to braille view
+            # If not BRF, Determine the focused text view and load the file there
+            if(filename.endswith(".brf")):
+                self.load_text(filename, self.textview2, True)
+            else:
+                if focused_textview == self.textview2:
+                    self.load_text(filename, self.textview2)
+                else:
+                    self.load_text(filename, self.textview1)
         dialog.destroy()
 
 
-    def load_file(self, filename):
-        #Load the contents of the file and set it to the active text view
-        if self.textview1.has_focus():
-            self.load_text(filename, self.textview1)
-        elif self.textview2.has_focus():
-            self.load_text(filename, self.textview2)
-
-    def load_text(self, filename, textview):
+    def load_text(self, filename, textview, brf=False):
         with open(filename, "r") as file:
             text = file.read()
             buffer = textview.get_buffer()
+            if(brf):
+                text = utils.braille_ASCII_to_braille_unicode(text)
             buffer.set_text(text)
     
     #save
@@ -570,21 +599,48 @@ class BrailleTranslatorWindow(Gtk.Window):
             self.save_file(filename)
 
         dialog.destroy()
-        
-    def save_as_file(self, filename):
 
-        # Get the focused text view
-        focused_textview = self.get_focus()
-        buffer = focused_textview.get_buffer()
+    #save_as_brf
+    def on_save_as_brf_activated(self, widget):
+        dialog = Gtk.FileChooserDialog(
+        title="Save as brf",
+        parent=self,action=Gtk.FileChooserAction.SAVE,
+        buttons=(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+        Gtk.STOCK_SAVE, Gtk.ResponseType.OK),
+        )
+        
+        dialog.set_do_overwrite_confirmation(True)
+
+        filter_brf = Gtk.FileFilter()
+        filter_brf.set_name("BRF (Braille Ready Format)")
+        filter_brf.add_pattern("*.brf")
+        dialog.add_filter(filter_brf)
+
+        response = dialog.run()
+        if response == Gtk.ResponseType.OK:
+            filename = dialog.get_filename()
+            self.save_as_brf_file(filename)
+
+        dialog.destroy()
+
+    def save_as_brf_file(self, filename):
+
+        # Only output will be saved as brf
+        buffer = self.textview2.get_buffer()
 
         # Get the text from the buffer
         start_iter = buffer.get_start_iter()
         end_iter = buffer.get_end_iter()
         text = buffer.get_text(start_iter, end_iter, True)
 
+        text_in_brf = utils.braille_unicode_to_braille_ASCII(text)
+
         # Save the text to the specified file
-        with open(filename, "w") as file:
-            file.write(text)
+        with open(filename, "wb") as file:
+            file.write(text_in_brf.encode())
+            file.write("\n".encode())
+            file.write("\n".encode())
+            file.write(bytes([26]))
     
     #cut       
     def on_cut_activated(self, widget):
@@ -849,6 +905,10 @@ class BrailleTranslatorWindow(Gtk.Window):
             print("Unnable to set selection color!")
 
 
+    def on_language_changed(self,widget):
+        self.pref.language = widget.get_active()
+        self.pref.save_preferences_to_file(user_preferences_file_path)
+
     def on_theme_changed(self,widget, textview):
         theme = widget.get_active()
         
@@ -868,11 +928,23 @@ class BrailleTranslatorWindow(Gtk.Window):
         self.set_cursor_color(textview, font_color)
         self.set_selection_color(textview, font_color, background_color)
 
+        if(textview == self.textview1):
+            self.pref.theme_1 = theme
+        else:
+            self.pref.theme_2 = theme
+        self.pref.save_preferences_to_file(user_preferences_file_path)
+
     #font style/size
     def on_font_set(self,widget, textview):
         font = widget.get_font_name();
         pangoFont = Pango.FontDescription(font)
         textview.modify_font(pangoFont)
+
+        if(textview == self.textview1):
+            self.pref.font_1 = font
+        else:
+            self.pref.font_2 = font
+        self.pref.save_preferences_to_file(user_preferences_file_path)
 
     #undo
     def undo(self,wedget,data=None):
