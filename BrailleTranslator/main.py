@@ -28,6 +28,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, Pango
 
 from BrailleTranslator import utils
+from BrailleTranslator import preferences
 
 # braille translation
 import louis
@@ -40,10 +41,16 @@ import os
 #for undo/redo
 import queue
 
+user_preferences_file_path = os.environ['HOME']+'/.braille-translator.cfg'
 
 class BrailleTranslatorWindow(Gtk.Window):
     def __init__(self):
         Gtk.Window.__init__(self, title="Braille Translator")
+
+        # User Preferences
+        self.pref = preferences.Preferences()
+        self.pref.load_preferences_from_file(user_preferences_file_path)
+
         self.line_limit = 0
 
         #for both text fields to be vertical and spacing between them
@@ -112,8 +119,11 @@ class BrailleTranslatorWindow(Gtk.Window):
         renderer_text3 = Gtk.CellRendererText()
         self.language_combo1.pack_start(renderer_text3, True)
         self.language_combo1.add_attribute(renderer_text3, "text", 0)
-        self.language_combo1.set_active(0)
+        self.language_combo1.set_active(self.pref.language)
         #self.language_combo1.set_size_request(200, 40)
+        self.language_combo1.connect(
+        "changed", self.on_language_changed,
+        )
         box_primary_widgets.pack_start(
         self.language_combo1, False, False, 0
         )
@@ -204,6 +214,11 @@ class BrailleTranslatorWindow(Gtk.Window):
         "font-set", self.on_font_set, 
         self.textview1
         )
+        self.font_button.set_font(self.pref.font_1)
+
+        # calling on_font_set manually because set_font wont trigger "font-set" signal
+        self.on_font_set(self.font_button, self.textview1);
+
         label.set_mnemonic_widget(self.font_button)
         hbox1.pack_start(label,False,True,0)
         hbox1.pack_start(self.font_button,False,True,0)
@@ -225,6 +240,7 @@ class BrailleTranslatorWindow(Gtk.Window):
         self.combobox_theme.connect(
         "changed", self.on_theme_changed, self.textview1
         )
+        self.combobox_theme.set_active(self.pref.theme_1);
         label.set_mnemonic_widget(self.combobox_theme)
         hbox1.pack_start(label,False,True,0)
         hbox1.pack_start(self.combobox_theme,False,True,0)
@@ -270,6 +286,10 @@ class BrailleTranslatorWindow(Gtk.Window):
         label.set_mnemonic_widget(self.font_button2)
         hbox2.pack_start(label,False,True,0)
         hbox2.pack_start(self.font_button2,False,True,0)
+        self.font_button2.set_font(self.pref.font_2)
+
+        # calling on_font_set manually because set_font wont trigger "font-set" signal
+        self.on_font_set(self.font_button2, self.textview2);
 
         fixed = Gtk.Fixed()
         hbox2.pack_start(fixed,True,True,0)
@@ -291,6 +311,7 @@ class BrailleTranslatorWindow(Gtk.Window):
         self.combobox_theme2.connect(
         "changed", self.on_theme_changed, self.textview2
         )
+        self.combobox_theme2.set_active(self.pref.theme_2);
         
         label.set_mnemonic_widget(self.combobox_theme2)
         
@@ -884,6 +905,10 @@ class BrailleTranslatorWindow(Gtk.Window):
             print("Unnable to set selection color!")
 
 
+    def on_language_changed(self,widget):
+        self.pref.language = widget.get_active()
+        self.pref.save_preferences_to_file(user_preferences_file_path)
+
     def on_theme_changed(self,widget, textview):
         theme = widget.get_active()
         
@@ -903,11 +928,23 @@ class BrailleTranslatorWindow(Gtk.Window):
         self.set_cursor_color(textview, font_color)
         self.set_selection_color(textview, font_color, background_color)
 
+        if(textview == self.textview1):
+            self.pref.theme_1 = theme
+        else:
+            self.pref.theme_2 = theme
+        self.pref.save_preferences_to_file(user_preferences_file_path)
+
     #font style/size
     def on_font_set(self,widget, textview):
         font = widget.get_font_name();
         pangoFont = Pango.FontDescription(font)
         textview.modify_font(pangoFont)
+
+        if(textview == self.textview1):
+            self.pref.font_1 = font
+        else:
+            self.pref.font_2 = font
+        self.pref.save_preferences_to_file(user_preferences_file_path)
 
     #undo
     def undo(self,wedget,data=None):
