@@ -155,11 +155,19 @@ class BrailleTranslatorWindow(Gtk.Window):
         #translation button
         self.translate_button = Gtk.Button(label="Translate")
         self.translate_button.connect("clicked", self.on_translate_clicked)
+        
+        self.back_translate_button = Gtk.Button(label="Back Translate")
+        self.back_translate_button.connect("clicked", self.on_back_translate_clicked)
+
         box_primary_widgets.pack_start(
         self.translate_button, True, True, 0
         )
+        
+        box_primary_widgets.pack_start(
+        self.back_translate_button, True, True, 0
+        )
         #self.translate_button.set_size_request(325, 50)
-
+     
         """draggable separator in between 2 textviews,split allows users 
         to adjust the size allocation between two textviews."""
         input_output_paned = Gtk.Paned()
@@ -271,8 +279,7 @@ class BrailleTranslatorWindow(Gtk.Window):
         self.textview2.set_tooltip_text("Output Text")
         self.textview2.get_buffer().connect('insert-text', 
         self.push_text_to_undobuffer2)
-
-   
+  
         hbox2 = Gtk.HBox()
         hbox2.set_hexpand(True)
         hbox2.set_vexpand(False)
@@ -431,7 +438,7 @@ class BrailleTranslatorWindow(Gtk.Window):
         key,mods=Gtk.accelerator_parse("<Ctrl>G")
         goto_item.add_accelerator("activate", accel_group, key, mods,  
         Gtk.AccelFlags.VISIBLE)
-
+       
         edit_menu.append(Gtk.SeparatorMenuItem())
 
         find = Gtk.MenuItem(label="Find")
@@ -499,7 +506,7 @@ class BrailleTranslatorWindow(Gtk.Window):
 
         # see if we recognise a keypress
         if ctrl and event.keyval == Gdk.KEY_t:
-            self.on_translate_clicked(None)
+            self.on_translate_clicked(None)          
 
     #new 
     def on_new_activated(self, widget): 
@@ -764,7 +771,7 @@ class BrailleTranslatorWindow(Gtk.Window):
                 0.5, 0.5)
 
         dialog.destroy()
- 
+
     #focuse active textview
     def get_active_textview(self):
         focus = self.get_focus()
@@ -788,29 +795,24 @@ class BrailleTranslatorWindow(Gtk.Window):
         except webbrowser.Error:
             webbrowser.open(url, new=2)
 
-    #write button or widget
-    def on_translate_clicked(self, button):  
-
+    def on_translate_clicked(self, button):
         # Get the value of the spin button
-        line_limit = int(self.spin_button.get_value())  
-        
+        line_limit = int(self.spin_button.get_value())
+
+        # Get the text buffer of the first text view
         buffer1 = self.textview1.get_buffer()
-        text1 = ""
 
         # Check if any text is selected in the text view
         if buffer1.get_has_selection():
-            # Get the selected text range
+            # Case 2: Translate only the selected portion
             start_iter, end_iter = buffer1.get_selection_bounds()
-
-            # Extract the selected text
             text1 = buffer1.get_text(start_iter, end_iter, True)
         else:
-            text1 = buffer1.get_text(buffer1.get_start_iter(), 
-            buffer1.get_end_iter(), True)
+            # Case 1: Translate the entire content
+            text1 = buffer1.get_text(buffer1.get_start_iter(), buffer1.get_end_iter(), True)
 
         # Get the index of the selected language in the combo box
         language_active = self.language_combo1.get_active()
-
         table_name = self.table_store[language_active][1]
 
         table_list = ['unicode.dis']
@@ -823,8 +825,7 @@ class BrailleTranslatorWindow(Gtk.Window):
         cursor_position = cursor_iter.get_offset()
 
         # Get the existing text in the second text view
-        existing_text = buffer2.get_text(buffer2.get_start_iter(), 
-        buffer2.get_end_iter(), True)
+        existing_text = buffer2.get_text(buffer2.get_start_iter(), buffer2.get_end_iter(), True)
 
         # Translate the text to Braille using the selected table
         braille = louis.translate(table_list, text1)
@@ -832,17 +833,41 @@ class BrailleTranslatorWindow(Gtk.Window):
         # Shape the braille output for printer
         new_text = self.shape_text_with_line_limit(braille[0], line_limit)
 
-        # Set the text of the second text view to the Braille translation
-        buffer2.set_text(existing_text + new_text)
+        # Check if the second text view is already empty
+        if not existing_text:
+            # If it's empty, set the text directly translated
+            buffer2.set_text(new_text)
+        else:
+            # otherwise, Provide options to the user
+            dialog = Gtk.Dialog(" Choose the Translation Options", self, Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT)
+
+            button_replace = Gtk.Button.new_with_label("Replace entire content")
+            button_insert = Gtk.Button.new_with_label("Insert at cursor point")
+
+            # Add buttons to the dialog with the correct order
+            dialog.add_button("Replace entire content", Gtk.ResponseType.YES)
+            dialog.add_button("Insert at cursor point", Gtk.ResponseType.NO)
+            dialog.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
+
+            dialog.set_default_response(Gtk.ResponseType.CANCEL)
+
+            # Run the dialog and get the response
+            response = dialog.run()
+
+            if response == Gtk.ResponseType.YES:
+                # Case 1: Replace the entire content
+                buffer2.set_text(new_text)
+            elif response == Gtk.ResponseType.NO:
+                # Case 2: Insert at cursor point
+                buffer2.insert(cursor_iter, new_text)
+
+            dialog.destroy()
 
         # Restore the cursor position in the second text view
-        if cursor_position <= len(
-        buffer2.get_text(buffer2.get_start_iter(), 
-        buffer2.get_end_iter(), True)
-        ):
+        if cursor_position <= len(buffer2.get_text(buffer2.get_start_iter(), buffer2.get_end_iter(), True)):
             cursor_iter = buffer2.get_iter_at_offset(cursor_position)
             buffer2.place_cursor(cursor_iter)
-    
+
     #line limit        
     def shape_text_with_line_limit(self, input_text, length):
         output_text = ""
@@ -855,6 +880,76 @@ class BrailleTranslatorWindow(Gtk.Window):
                 character_count = character_count+1
             output_text = output_text+character
         return output_text
+        
+    
+    def on_back_translate_clicked(self, button):
+        # Get the text buffer of the second text view
+        buffer2 = self.textview2.get_buffer()
+
+        # Check if any text is selected in the text view
+        if buffer2.get_has_selection():
+            # Case 2: Back-translate only the selected portion
+            start_iter, end_iter = buffer2.get_selection_bounds()
+            braille_text = buffer2.get_text(start_iter, end_iter, True)
+        else:
+            # Case 1: Back-translate the entire content
+            braille_text = buffer2.get_text(buffer2.get_start_iter(), buffer2.get_end_iter(), True)
+
+        # Get the index of the selected language in the combo box (if applicable)
+        language_active = self.language_combo1.get_active()
+
+        # Get the corresponding Braille table 
+        table_name = self.table_store[language_active][1]
+
+        # Define the table_list for Braille-to-text retranslation
+        table_list = ['unicode.dis']
+        table_list.append(table_name)
+
+        # Implement the back-translation logic using the louis library
+        retranslated_result = louis.backTranslate(table_list, braille_text)
+
+        if retranslated_result is not None:
+            # Extract the retranslated text from the tuple
+            original_text = retranslated_result[0]
+
+            # Check if the first text view is already empty or not
+            buffer1 = self.textview1.get_buffer()
+            if not buffer1.get_text(buffer1.get_start_iter(), buffer1.get_end_iter(), True):
+                # If it's empty, set the text directly transalated
+                buffer1.set_text(original_text)
+            else:
+                # otherwise, Provide options to the user
+                dialog = Gtk.Dialog("Choose the Back-Translation Options", self, Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT)
+
+                button_replace = Gtk.Button.new_with_label("Replace entire content")
+                button_insert = Gtk.Button.new_with_label("Insert at cursor point")
+
+                # Add buttons to the dialog with the correct order
+                dialog.add_button("Replace entire content", Gtk.ResponseType.YES)
+                dialog.add_button("Insert at cursor point", Gtk.ResponseType.NO)
+                dialog.add_button(Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL)
+
+                dialog.set_default_response(Gtk.ResponseType.CANCEL)
+
+                # Run the dialog and get the response
+                response = dialog.run()
+
+                if response == Gtk.ResponseType.YES:
+                    # Case 1: Replace the entire content
+                    buffer1.set_text(original_text)
+                elif response == Gtk.ResponseType.NO:
+                    # Case 2: Insert at cursor point
+                    cursor_mark = buffer1.get_insert()
+                    cursor_iter = buffer1.get_iter_at_mark(cursor_mark)
+                    cursor_position = cursor_iter.get_offset()
+                    buffer1.insert(cursor_iter, original_text)
+                    buffer1.place_cursor(buffer1.get_iter_at_offset(cursor_position + len(original_text)))
+
+                dialog.destroy()
+
+        else:
+            print("Back-translation failed. Check the Braille table and input text.")
+ 
 
     def set_cursor_color(self, textview, color):
         colors_in_float = Gdk.color_parse(color).to_floats()
@@ -1236,3 +1331,4 @@ class FindAndReplace(Find):
 if __name__ == "__main__":
     win = BrailleTranslatorWindow()
     win.connect("destroy", Gtk.main_quit)
+
