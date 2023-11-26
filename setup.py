@@ -25,7 +25,7 @@ setup(name='BrailleTranslator',
       url='https://github.com/greeshnasarath/braille-translator',
       license = 'GPL-3',
       packages=['BrailleTranslator'],
-      data_files=[('share/BrailleTranslator/',['data/GUI.png', 'data/language-table-dict.txt']),
+      data_files=[('share/BrailleTranslator/',['data/icon.png', 'data/language-table-dict.txt']),
       ('share/applications/',['braille-translator.desktop']),
       ('bin/',['braille-translator'])]
       )

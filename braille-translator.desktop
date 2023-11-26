@@ -1,12 +1,10 @@
-#!/usr/bin/env xdg-open
-
 [Desktop Entry]
-Categories=GNOME;GTK;Utility;Accessibility;
+Categories=GTK;Office;
 Version=1.0
 Type=Application
 Terminal=false
-Exec=braille-translator
+Exec=braille-translator %U
 Name=Braille-Translator
-Icon=/usr/share/BrailleTranslator/GUI.png
+Icon=/usr/share/BrailleTranslator/icon.png
 MimeType=text/plain;
 Keywords=text;editor;
