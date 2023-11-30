@@ -251,6 +251,9 @@ class BrailleTranslatorWindow(Gtk.Window):
 
         fixed = Gtk.Fixed()
         hbox1.pack_start(fixed,True,True,0)
+        # Add a status bar
+        self.statusbar1 = Gtk.Statusbar()
+        self.statusbar1_context_id = self.statusbar1.get_context_id("Status1")
 
         #scrolled window for first trxtview
         scrolled_win1 = Gtk.ScrolledWindow()
@@ -261,6 +264,10 @@ class BrailleTranslatorWindow(Gtk.Window):
 
         box1 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box1.set_vexpand(True)
+        # Pack the second status bar at the left of the box
+        box1.pack_start(self.statusbar1, False, False, 0)
+        # Connect cursor position change signal to the callback function
+        self.textview1.get_buffer().connect("notify::cursor-position", self.on_cursor_position1_changed)
         box1.pack_start(scrolled_win1, True, True, 0)
         box1.pack_start(hbox1, False, True, 0)
 
@@ -325,6 +332,9 @@ class BrailleTranslatorWindow(Gtk.Window):
         fixed = Gtk.Fixed()
         hbox2.pack_start(fixed,True,True,0)
     
+        #Create the second status bar
+        self.statusbar2 = Gtk.Statusbar()
+        self.statusbar2_context_id = self.statusbar2.get_context_id("Status2")
         #scrolled window for second textview
         scrolled_win2 = Gtk.ScrolledWindow()
         scrolled_win2.set_policy(Gtk.PolicyType.NEVER, 
@@ -334,6 +344,9 @@ class BrailleTranslatorWindow(Gtk.Window):
 
         box2 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8)
         box2.set_vexpand(True)
+        # Pack the second status bar at the left of the box
+        box2.pack_start(self.statusbar2, False, False, 0)
+        self.textview2.get_buffer().connect("notify::cursor-position", self.on_cursor_position2_changed)
         box2.pack_start(scrolled_win2, True, True, 0)
         box2.pack_start(hbox2, False, True, 0)
 
@@ -356,6 +369,27 @@ class BrailleTranslatorWindow(Gtk.Window):
         self.connect("destroy", self.quit);
         Gtk.main()
         
+    def on_cursor_position1_changed(self, buffer, *args):
+        # Get the cursor position
+        cursor_position1 = buffer.get_property('cursor-position')
+
+        # Get the line number and character count
+        line, offset = buffer.get_iter_at_offset(cursor_position1).get_line(), buffer.get_iter_at_offset(cursor_position1).get_line_offset()
+
+        # Update the status bar
+        message = f"Line: {line + 1} | Character: {offset + 0}"
+        self.statusbar1.push(self.statusbar1_context_id, message)
+
+    def on_cursor_position2_changed(self, buffer, *args):
+        # Get the cursor position
+        cursor_position2 = buffer.get_property('cursor-position')
+
+        # Get the line number and character count
+        line, offset = buffer.get_iter_at_offset(cursor_position2).get_line(), buffer.get_iter_at_offset(cursor_position2).get_line_offset()
+
+        # Update the status bar
+        message = f"Line: {line + 1} | Character: {offset + 0}"
+        self.statusbar2.push(self.statusbar2_context_id, message)
     #menu function
     def create_menu(self, menubar):
 
