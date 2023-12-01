@@ -433,6 +433,9 @@ class BrailleTranslatorWindow(Gtk.Window):
         #key,mods=Gtk.accelerator_parse("<Ctrl>S")
         #save_as_brf_item.add_accelerator("activate", accel_group, key, mods,
         #Gtk.AccelFlags.VISIBLE)
+        key,mods=Gtk.accelerator_parse("<Ctrl>B")
+        save_as_brf_item.add_accelerator("activate", accel_group, key, mods,
+        Gtk.AccelFlags.VISIBLE)
 
         file_menu_item = Gtk.MenuItem.new_with_label("File")
         file_menu_item.set_submenu(file_menu)
@@ -538,7 +541,8 @@ class BrailleTranslatorWindow(Gtk.Window):
         # see if we recognise a keypress
         if ctrl and event.keyval == Gdk.KEY_t:
             self.on_translate_clicked(None)
-
+        if ctrl and event.keyval == Gdk.KEY_d:
+            self.on_back_translate_clicked(None)
     #new 
     def on_new_activated(self, widget): 
         # Clear the active text view and set focus to it
